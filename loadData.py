@@ -79,3 +79,4 @@ print(pd.DataFrame([
     ('WDT.P577 (publication date)', '{:n}'.format(
         len(set(graph.subjects(WDT.P577, None))))),
 ]))
+# %%
