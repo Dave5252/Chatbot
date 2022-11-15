@@ -80,3 +80,36 @@ print(pd.DataFrame([
         len(set(graph.subjects(WDT.P577, None))))),
 ]))
 # %%
+# load images
+with open("r'C:\Users\David\Desktop\Chatbot\Data\images.json", "r") as f:
+    images = json.load(f)
+
+# %%
+# entity labels into list, for later use
+entLblList = [str(o) for o in graph.objects(None, RDFS.label)]
+predURIList = list(predicates)
+predWDTlist = []
+predLblList = []
+for idx, prd in enumerate(predURIList):
+
+    wdtIdPattern = "{}(.*)".format(WDT)
+    if re.search(wdtIdPattern, prd):
+        predWDT = re.search(wdtIdPattern, prd).group(1)
+    predWDTlist.append(predWDT)
+def getRelLbl(graph, rel):
+    # get Rel URI
+    query_relLbl = '''
+            prefix wdt: <http://www.wikidata.org/prop/direct/>
+            prefix wd: <http://www.wikidata.org/entity/>
+
+            SELECT ?relLbl WHERE{{
+                wdt:{} rdfs:label ?relLbl.
+                }}'''.format(rel)
+    relLbl = graph.query(query_relLbl)
+    return relLbl
+
+
+for idx, pred in enumerate(predWDTlist):
+    predLbl = str(list(getRelLbl(graph, pred))[0][0])
+    predLblList.append(predLbl)
+    print(predLblList[idx])
