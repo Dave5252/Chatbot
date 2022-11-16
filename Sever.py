@@ -1,17 +1,15 @@
-
 import time
 from typing import Optional
 import requests
-from collections import defaultdict #The defaultdict is a subdivision of the dict class. Its importance lies in the fact that it allows each new key to be given a default value based on the type of dictionary being created
+from collections import \
+    defaultdict  # The defaultdict is a subdivision of the dict class. Its importance lies in the fact that it allows each new key to be given a default value based on the type of dictionary being created
 
 from main import msgP
 
 url = 'https://speakeasy.ifi.uzh.ch'
-class Server:
 
-    @classmethod
-    def login(cls, username, password, url='https://speakeasy.ifi.uzh.ch'):
-        return requests.post(url=url + "/api/login", json={"username": username, "password": password})
+
+class Server:
 
     def __init__(self, username, password, url='https://speakeasy.ifi.uzh.ch'):
         self.agent_details = self.login(username, password)
@@ -20,7 +18,6 @@ class Server:
         self.username = username
         self.session_token = self.agent_details['sessionToken']
         self.chat_state = defaultdict(lambda: {'messages': defaultdict(dict), 'initiated': False, 'my_alias': None})
-        self.data =
 
     def listen(self):
         listen_freq = 3  # seconds
@@ -61,20 +58,24 @@ class Server:
                                 response = msgp.parseMsg()
 
                                 self.post_message(room_id=room_id, session_token=self.session_token,
-                                                  message='Whats poppin my G, Got your messag: \'{}\' at {}.'.format(message['message'],
-                                                                                                   self.get_time()))
+                                                  message='Whats poppin my G, Got your messag: \'{}\' at {}.'.format(
+                                                      message['message'],
+                                                      self.get_time()))
             time.sleep(listen_freq)
+
     # check for available rooms -->https://speakeasy.ifi.uzh.ch/client-swagger#/Chat/getApiRooms
     def login(self, username: str, password: str):
         agent_details = requests.post(url=url + "/api/login", json={"username": username, "password": password}).json()
-        print('- User {} successfully logged in with session \'{}\'!'.format(agent_details['userDetails']['username'], agent_details['sessionToken']))
+        print('- User {} successfully logged in with session \'{}\'!'.format(agent_details['userDetails']['username'],
+                                                                             agent_details['sessionToken']))
         return agent_details
 
     def check_rooms(self, session_token: str):
         return requests.get(url=url + "/api/rooms", params={"session": session_token}).json()
 
     def check_room_state(self, room_id: str, since: int, session_token: str):
-        return requests.get(url=url + "/api/room/{}/{}".format(room_id, since), params={"roomId": room_id, "since": since, "session": session_token}).json()
+        return requests.get(url=url + "/api/room/{}/{}".format(room_id, since),
+                            params={"roomId": room_id, "since": since, "session": session_token}).json()
 
     def post_message(self, room_id: str, session_token: str, message: str):
         tmp_des = requests.post(url=url + "/api/room/{}".format(room_id),
@@ -86,9 +87,12 @@ class Server:
         return time.strftime("%H:%M:%S, %d-%m-%Y", time.localtime())
 
     def logout(self):
-        if requests.get(url=url + "/api/logout", params={"session": self.session_token}).json()['description'] == 'Logged out':
+        if requests.get(url=url + "/api/logout", params={"session": self.session_token}).json()[
+            'description'] == 'Logged out':
             print('- Session \'{}\' successfully logged out!'.format(self.session_token))
     #
+
+
 if __name__ == '__main__':
     username = 'david.diener_bot'
     password = ('czLFGXbrspCK0Q')

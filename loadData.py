@@ -44,21 +44,24 @@ top250 -= {''}
 print(pd.DataFrame([
     ('Top-250 coverage', '{:n}'.format(
         len(top250 & {str(o) for o in graph.objects(None, WDT.P345) if o.startswith('tt')}))),
-    ('Entities with IMDb ID', '{:n}'.format(
+    ('Entities with IMDb ID', '{:n}'.format(  # IMDB ID
         len({str(o) for o in graph.objects(None, WDT.P345) if o.startswith('tt')}))),
     ('Plots linked to a movie', '{:n}'.format(
-        len({qid for qid, plot in csv.reader(open(r'C:\Users\David\Desktop\Chatbot\Data\plots.csv', encoding='utf-8')) if
+        len({qid for qid, plot in csv.reader(open(r'C:\Users\David\Desktop\Chatbot\Data\plots.csv', encoding='utf-8'))
+             if
              URIRef(qid) in entities}))),
     ('Comments linked to a movie', '{:n}'.format(
-        len([qid for qid, rating, sentiment, comment in csv.reader(open(r'C:\Users\David\Desktop\Chatbot\Data\user-comments.csv')) if
+        len([qid for qid, rating, sentiment, comment in
+             csv.reader(open(r'C:\Users\David\Desktop\Chatbot\Data\user-comments.csv')) if
              URIRef(qid) in entities]))),
     ('Movies having at least one comment', '{:n}'.format(
-        len({qid for qid, rating, sentiment, comment in csv.reader(open(r'C:\Users\David\Desktop\Chatbot\Data\user-comments.csv')) if
+        len({qid for qid, rating, sentiment, comment in
+             csv.reader(open(r'C:\Users\David\Desktop\Chatbot\Data\user-comments.csv')) if
              URIRef(qid) in entities}))),
 ]))
 # %%
+# from dataset_intro notebook
 ent_lit_preds = {p for s, p, o in graph.triples((None, None, None)) if isinstance(o, Literal)}
-ent_lit_preds
 print(pd.DataFrame([
     ('# entities', '{:n}'.format(
         len(entities))),
@@ -81,12 +84,12 @@ print(pd.DataFrame([
 ]))
 # %%
 # load images
-with open("r'C:\Users\David\Desktop\Chatbot\Data\images.json", "r") as f:
+with open(r'C:\Users\David\Desktop\Chatbot\Data\images.json', "r") as f:
     images = json.load(f)
 
 # %%
 # entity labels into list, for later use
-entLblList = [str(o) for o in graph.objects(None, RDFS.label)]
+entLabelList = [str(o) for o in graph.objects(None, RDFS.label)]
 predURIList = list(predicates)
 predWDTlist = []
 predLblList = []
@@ -96,6 +99,7 @@ for idx, prd in enumerate(predURIList):
     if re.search(wdtIdPattern, prd):
         predWDT = re.search(wdtIdPattern, prd).group(1)
     predWDTlist.append(predWDT)
+
 def getRelLbl(graph, rel):
     # get Rel URI
     query_relLbl = '''
