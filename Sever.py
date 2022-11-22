@@ -4,6 +4,7 @@ from collections import defaultdict  # The defaultdict is a subdivision of the d
 # fact that it allows each new key to be given a default value based on the type of dictionary being created
 
 from main import msgP
+from loadData import graph, WDT, WD, images
 
 url = 'https://speakeasy.ifi.uzh.ch'
 
@@ -52,14 +53,15 @@ class Server:
                                                                                             message['message'],
                                                                                             self.get_time()))
 
-                                #
-                                msgp = msgP(message["message"])
-                                response = msgp.parseMsg()
-
                                 self.post_message(room_id=room_id, session_token=self.session_token,
                                                   message='Whats poppin my G, Got your messag: \'{}\' at {}.'.format(
                                                       message['message'],
                                                       self.get_time()))
+                                msgp = msgP(message["message"])
+                                response = msgp.parseMsg(graph, WDT, WD, images)
+
+                                self.post_message(room_id=room_id, session_token=self.session_token,
+                                                  message=response)
             time.sleep(listen_freq)
 
     # check for available rooms -->https://speakeasy.ifi.uzh.ch/client-swagger#/Chat/getApiRooms

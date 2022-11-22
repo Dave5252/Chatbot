@@ -43,6 +43,30 @@ class msgP:
         print(entList)
         return entList
 
+    def parseRel(self, entity, graph, WDT):
+        relationList, tbd = getRel(self.message)
+        print("parseRel", entity, relationList, tbd)
+        if tbd == True:
+            relationList = tbdRel(relationList)
+        if 'recommend' not in relationList:
+            relList = []
+            for idx, relation in enumerate(relationList):
+                print("relation:", relation)
+                relURI = getRelURI(graph, relation, WDT)
+                print("relURI: ", relURI)
+                if len(relURI) != 0:
+                    print('relURI exist')
+                    relList.append(relation)
+                # if not, then query alias
+                else:
+                    print('relURI does not exist')
+    #               relAliasList = searchAlias(relation, predAlias)
+    #              print('Alias is: ', relAliasList)
+    #              if len(relAliasList) != 0:
+    #                  relList.append(relAliasList[0])
+        else:
+            relList = ['recommend']
+        return relList
         # parse the message and get the response
     def parseMsg(self, graph, WDT, WD, images):
         entities = self.parseEnt(graph)
@@ -64,11 +88,11 @@ class msgP:
             print("case1")
             entity = entities[0]
             relation = relations[0]
-            incrowd, rate, lbl, cnt1, lblRev, cnt2 = checkCrowdER(entity, relation, graph, WDT, WD,
-                                                                  crowd.cleanCrowd,
-                                                                  crowd.aggAns, crowd.numCnt, crowd.irate)
-            print('crowd')
-            print('crowd, rate, lbl,cnt1,lblRev,cnt2: ', incrowd, rate, lbl, cnt1, lblRev, cnt2)
+#            incrowd, rate, lbl, cnt1, lblRev, cnt2 = checkCrowdER(entity, relation, graph, WDT, WD,
+#                                                                  crowd.cleanCrowd,
+#                                                                  crowd.aggAns, crowd.numCnt, crowd.irate)
+#           print('crowd')
+#           print('crowd, rate, lbl,cnt1,lblRev,cnt2: ', incrowd, rate, lbl, cnt1, lblRev, cnt2)
             print(entity, relation)
             relid = getRelWDTid(graph, WDT, relation)
             res = []
@@ -95,11 +119,11 @@ class msgP:
                     # if result is not URI, meaning getting number and output directly
                     else:
                         answers.append(str(row.objU))
-                if incrowd:
-                    answer_template = "Hi, {} of {} is {}, according to the crowd, who had an inter-rater agreement of {} in this batch; the answer distribution for this task was {} support votes and {} reject vote. ".format(
-                        relation, entity, answers, rate, cnt1, cnt2)
-                else:
-                    answer_template = "Hi, {} of {} is {}".format(relation, entity, answers)
+              #  if incrowd:
+              #      answer_template = "Hi, {} of {} is {}, according to the crowd, who had an inter-rater agreement of {} in this batch; the answer distribution for this task was {} support votes and {} reject vote. ".format(
+              #          relation, entity, answers, rate, cnt1, cnt2)
+              #  else:
+                answer_template = "Hi, {} of {} is {}".format(relation, entity, answers)
                 print(answer_template)
 
         # if two entities
@@ -116,9 +140,9 @@ class msgP:
             res4 = set(graph.query(query4))
             res = set.union(res1, res2, res3, res4)
             print(res, len(res))
-            incrowd, rate, lbl, cnt1, lblRev, cnt2 = checkCrowdER(entities[1], entities[0], graph, WDT, WD,
-                                                                  crowd.cleanCrowd, crowd.aggAns, crowd.numCnt,
-                                                                  crowd.irate)
+            #incrowd, rate, lbl, cnt1, lblRev, cnt2 = checkCrowdER(entities[1], entities[0], graph, WDT, WD,
+            #                                                      crowd.cleanCrowd, crowd.aggAns, crowd.numCnt,
+            #                                                      crowd.irate)
 
             if len(res) == 0:
                 answer_template = "Sorry, there seems no answer to your question. Please try to rephrase or simplify your question."
@@ -128,11 +152,11 @@ class msgP:
                 answers = []
                 for row in res:
                     answers.append(str(row.relL))
-                if incrowd:
-                    answer_template = "Hi, {} of {} is {}, according to the crowd, who had an inter-rater agreement of {} in this batch; the answer distribution for this task was {} support votes and {} reject vote. ".format(
-                        relation, entity, answers, rate, cnt1, cnt2)
-                else:
-                    answer_template = "Hi, {} of {} is {}".format(relation, entity, answers)
+             #   if incrowd:
+             #       answer_template = "Hi, {} of {} is {}, according to the crowd, who had an inter-rater agreement of {} in this batch; the answer distribution for this task was {} support votes and {} reject vote. ".format(
+             #           relation, entity, answers, rate, cnt1, cnt2)
+             #   else:
+                answer_template = "Hi, {} of {} is {}".format(relation, entity, answers)
                 print(answer_template)
 
         # recommendation
@@ -220,7 +244,6 @@ class msgP:
 
                 elif len(entities) == 0:
                     # return pic of random movie genre
-                    ge = getEntity()
                     tokens = getTokens(self.message)
                     genre = returnNounBfMovie(tokens)
                     imgid = mutliM.showGenrePoster(graph, images, genre)
