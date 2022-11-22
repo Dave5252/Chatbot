@@ -3,13 +3,13 @@ import rdflib
 from EntityAndRealtion import *
 
 from Queries import queryLabel, query_template1, query_template2, query_template3
-from Recommendation import Recommendation
-from showPic import showPic
+from Recommend import Recommendation
+from Multimedia import Multimedia
 from transformers import pipeline
-from humanOrFilm import humanOrFilm
-from datas import entLblList  #, predAlias
+from HumanOrMovie import humanOrFilm
+from loadData import entLabelList  #, predAlias
 #from crowd import crowd
-from checkCrowd import checkCrowdER
+from Crowd import checkCrowdER
 
 
 class msgP:
@@ -168,7 +168,7 @@ class msgP:
 
         # show picture
         if not notPicture:
-            sP = showPic()
+            mutliM = Multimedia()
             print("Show Pictures")
             if not noPoster:
                 # assume here return movie pic
@@ -179,7 +179,7 @@ class msgP:
                         answer_template = "Only movie has poster, please reinput."
                     elif film:
                         print("Show Poster")
-                        imgids = sP.showPoster(entity, graph, images)
+                        imgids = mutliM.showPoster(entity, graph, images)
                         print(imgids)
                         if len(imgids) > 0:
                             answer_template = "Hi, this is the poster you requested.{}".format(imgids[0])
@@ -189,7 +189,7 @@ class msgP:
                     # return poster of random movie genre
                     tokens = getTokens(self.message)
                     genre = returnNounBfMovie(tokens)
-                    imgid = sP.showGenrePoster(graph, images, genre)
+                    imgid = mutliM.showGenrePoster(graph, images, genre)
                     print(imgid)
                     answer_template = "Hi, this is the poster you requested.{}".format(imgid)
 
@@ -202,7 +202,7 @@ class msgP:
 
                     if human:
                         print("Show picture related to human")
-                        imgids = sP.showPicwHumanInp(entity, graph, images)
+                        imgids = mutliM.showPicwHumanInp(entity, graph, images)
                         print(imgids)
                         if len(imgids) > 0:
                             answer_template = "Hi, this is the picture you requested.{}".format(imgids[0])
@@ -210,7 +210,7 @@ class msgP:
                             answer_template = "Sorry, I can't find the picture you requested."
                     elif film:
                         print("Show picture related to film")
-                        imgids = sP.showPicwFilmInp(entity, graph, images)
+                        imgids = mutliM.showPicwFilmInp(entity, graph, images)
                         # print(imgids)
                         if len(imgids) > 0:
                             answer_template = "Hi, this is the picture you requested.{}".format(imgids[0])
@@ -223,7 +223,7 @@ class msgP:
                     ge = getEntity()
                     tokens = getTokens(self.message)
                     genre = returnNounBfMovie(tokens)
-                    imgid = sP.showGenrePoster(graph, images, genre)
+                    imgid = mutliM.showGenrePoster(graph, images, genre)
                     print(imgid)
                     answer_template = "Hi, this is the poster you requested.{}".format(imgid)
 

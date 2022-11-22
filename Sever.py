@@ -1,8 +1,7 @@
 import time
-from typing import Optional
 import requests
-from collections import \
-    defaultdict  # The defaultdict is a subdivision of the dict class. Its importance lies in the fact that it allows each new key to be given a default value based on the type of dictionary being created
+from collections import defaultdict  # The defaultdict is a subdivision of the dict class. Its importance lies in the
+# fact that it allows each new key to be given a default value based on the type of dictionary being created
 
 from main import msgP
 
@@ -95,6 +94,6 @@ class Server:
 
 if __name__ == '__main__':
     username = 'david.diener_bot'
-    password = ('czLFGXbrspCK0Q')
+    password = 'czLFGXbrspCK0Q'
     demobot = Server(username, password)
     demobot.listen()
