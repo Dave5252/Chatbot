@@ -29,8 +29,8 @@ with open(r'C:\Users\David\Desktop\Chatbot\Data\relation_ids.del', 'r') as ifile
     rel2id = {rdflib.term.URIRef(rel): int(idx) for idx, rel in csv.reader(ifile, delimiter='\t')}
     id2rel = {v: k for k, v in rel2id.items()}
 
-convEnt = {ent: str(lb) for ent, lb in graph.subject_objects(RDFS.label)}
-convLib = {lb: ent for ent, lb in convEnt.items()}
+ent2lbl = {ent: str(lb) for ent, lb in graph.subject_objects(RDFS.label)}
+lbl2ent = {lb: ent for ent, lb in ent2lbl.items()}
 entities = set(graph.subjects()) | {s for s in graph.objects() if isinstance(s, URIRef)}
 # all subjects and the objects which isinstance of URIRef are entities
 predicates = set(graph.predicates())
