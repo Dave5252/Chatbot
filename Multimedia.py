@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Dec  9 14:58:00 2021
-
-@author: Wenqing
-"""
-### This file deals with all questions that is multimedia related
-
 from Queries import imdbIdTemp, genrePosterTemp, movie2ActorImdbTemp, humanImdbIdTemp
 
 
@@ -16,9 +8,7 @@ class Multimedia:
     # show poster of movie
     def showPoster(self, entity, graph, images):
         queryImdb = imdbIdTemp.format(entity)
-
         res = list(graph.query(queryImdb))
-
         imdbIds = []
         for idx, row in enumerate(res):
             imdbId = str(res[idx][0])
@@ -68,20 +58,20 @@ class Multimedia:
         for idx, row in enumerate(res):
             imdbId = str(res[idx][0])
             if imdbId.startswith('nm'):
-                imdbIds.append(imdbId)
+                imdbIds.append("https://www.imdb.com/name/"+imdbId)
         print(imdbIds)
-        filmsList = []
-        for idx, imdbid in enumerate(imdbIds):
-            films = list(filter(lambda film: film['cast'] == [imdbid], images))
-            filmsList += films
-        # print(filmsList)
-        imgids = []
-        for idx, film in enumerate(filmsList):
-            imgid = film['img']
-            imgids.append('image:' + imgid.strip('.jpg'))
-        print(imgids)
+#        filmsList = []
+#        for idx, imdbid in enumerate(imdbIds):
+#            films = list(filter(lambda film: film['cast'] == [imdbid], images))
+#            filmsList += films
+#        # print(filmsList)
+#        imgids = []
+#        for idx, film in enumerate(filmsList):
+#            imgid = film['img']
+#            imgids.append('image:' + imgid.strip('.jpg'))
+#        print(imgids)
 
-        return imgid
+        return imdbIds
 
     # show picture given film name as entiy
     def showPicwFilmInp(self, entity, graph, images):
