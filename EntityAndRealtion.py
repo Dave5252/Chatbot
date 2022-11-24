@@ -92,7 +92,7 @@ def checkTypo(entLblList, entity):
     entTypoCorr = entLblList[matchnode]
     return entTypoCorr
 
-
+# TODO delete this method
 def getNearestEntEmb(WD, ent2id, ent2lbl, lbl2ent, id2ent, entity_emb, word):
     ent = ent2id[lbl2ent[word]]
     emb = entity_emb[ent]
@@ -105,7 +105,7 @@ def getNearestEntEmb(WD, ent2id, ent2lbl, lbl2ent, id2ent, entity_emb, word):
         lbls.append(ent2lbl[id2ent[idx]])
     return qids, lbls
 
-
+# TODO delete this method
 def clarifyEnt(qids, lbls):
     qid = qids[10]
     lbl = lbls[10]
@@ -128,20 +128,20 @@ def returnVerbs(pos_tokens):
         verbTokens.append(pos_tokens[idx][0])
     return verbTokens
 
-    ## this method match the ... of pattern
+    # this method match the ... of pattern
 
 
 def theOfTokens(question):
     theOfPattern = "the (.*) of"
     matching = re.search(theOfPattern, question)
     if not matching:
+        print("no match for the of pattern")
         return False
     else:
         relation = matching.group(1)
         return [relation]
-    ## main method for getting relation
 
-
+    # main method for getting relation
 def getRel(question):
     theOf = theOfTokens(question)
     if not theOf:
@@ -152,19 +152,21 @@ def getRel(question):
     else:
         tbd = False
         relations = theOf
+    if "recommend" in question.lower():
+        relations = ['recommend']
+    if "directed" in question.lower():
+        relations = ['director']
+    if "director" in question.lower():
+        relations = ['director']
     return relations, tbd
 
-    ## check if recommend in relation
-
-
+    # check if recommend in relation
 def tbdRel(relation):
     if 'recommend' in relation:
         return ['recommend']
     return relation
 
-    ## search for alias of relation in predAlias dictionary
-
-
+# search for alias of relation in predAlias dictionary
 def searchAlias(relation, predAlias):
 
     swdtPropList = []
@@ -187,7 +189,7 @@ def searchAlias(relation, predAlias):
 
     return swdtPropList
 
-    ## get relation pid by relation labels
+    # get relation pid by relation labels
 
 
 def getRelWDTid(graph, WDT, relations):
@@ -195,7 +197,7 @@ def getRelWDTid(graph, WDT, relations):
     relIds = getRelIdByURI(WDT, relURIList)
     return relIds
 
-    ## query for relation URI with relation label as input
+    # query for relation URI with relation label as input
 
 
 def getRelURI(graph, relation, WDT):
@@ -213,7 +215,6 @@ def getRelURI(graph, relation, WDT):
         print(relURI)
         if WDT in str(relURI[0]):
             relURIs.append(str(relURI[0]))
-    print("relURI: ", relURIs)
     return relURIs
 
 

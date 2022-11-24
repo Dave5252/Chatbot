@@ -44,7 +44,7 @@ class DemoBot:
                                 self.chat_state[room_id]['messages'][message['ordinal']] = message
                                 print('\t- Chatroom {} - new message #{}: \'{}\' - {}'.format(room_id, message['ordinal'], message['message'], self.get_time()))
 
-                                ##### You should call your agent here and get the response message #####
+                                ### You should call your agent here and get the response message ###
 
                                 self.post_message(room_id=room_id, session_token=self.session_token, message='Got your message: \'{}\' at {}.'.format(message['message'], self.get_time()))
             time.sleep(listen_freq)

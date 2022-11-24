@@ -9,7 +9,7 @@ class Recommendation:
     def __init__(self):
         pass
 
-    ## Positive recommendation given film name
+    # Positive recommendation given film name
     def posRcmFilm(self, entity):
         # TransE
         print("get entity: ", entity)
@@ -24,7 +24,7 @@ class Recommendation:
 
         return rcmds
 
-    ## positive recommendation given human name and genre
+    # positive recommendation given human name and genre
     def posRcmHuman(self, entity, target, graph):
         # director's movie
         rcmds = []
@@ -34,10 +34,3 @@ class Recommendation:
             if target[0] in str(row.genreLbl):
                 rcmds.append(str(row.movieLbl))
         return rcmds
-
-    ## unfinished recommendation for negative sentiment
-    # def negRcmFilm(self,entity):
-    #     return rcmds
-
-    # def negRcmHuman(self,entity,target):
-    #     return rcmds

@@ -1,4 +1,4 @@
-### This file search if entity and relation given in message exist in cleaned crowd source data
+## This file search if entity and relation given in message exist in cleaned crowd source data
 from EntityAndRealtion import *
 
 
@@ -61,7 +61,7 @@ def checkCrowdER(entity, relation, graph, WDT, WD, cleanCrowd, aggAns, numCnt, i
     return incrowd, rate, lbl, cnt1, lblRev, cnt2
 
 
-## this methdo deals with two entities as input
+# this methdo deals with two entities as input
 def checkCrowdEE(entity1, entity2, graph, WDT, WD, cleanCrowd, aggAns, numCnt, irate):
     entURI1 = getEntURI(graph, entity1)
     entid1 = getEntIdByURI(WD, entURI1[0])
