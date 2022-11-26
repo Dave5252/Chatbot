@@ -4,7 +4,7 @@ from Queries import imdbIdTemp, genrePosterTemp, movie2ActorImdbTemp, humanImdbI
 class Multimedia:
     def __init__(self):
         pass
-
+    #Todo: Delete
     # show poster of movie
     def showPoster(self, entity, graph, images):
         queryImdb = imdbIdTemp.format(entity)
@@ -25,6 +25,7 @@ class Multimedia:
             imgids.append('image:' + imgid.strip('.jpg'))
         return imgids
 
+    #TODO: Delete
     # show poster of movie in certain genre
     def showGenrePoster(self, graph, images, genre):
         queryGenre = genrePosterTemp.format(genre)
