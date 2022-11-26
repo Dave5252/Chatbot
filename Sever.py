@@ -4,7 +4,7 @@ from collections import defaultdict  # The defaultdict is a subdivision of the d
 # fact that it allows each new key to be given a default value based on the type of dictionary being created
 
 from main import msgP
-from loadData import graph, WDT, WD, images
+from LoadData import graph, WDT, WD, images
 
 url = 'https://speakeasy.ifi.uzh.ch'
 

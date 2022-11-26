@@ -1,4 +1,8 @@
-from loadData import entLabelList
+import random
+
+import pandas as pd
+from sklearn.metrics import pairwise_distances
+from LoadData import entLabelList, relation_emb, entity_emb, ent2id, rel2id, id2ent, ent2lbl
 import rdflib
 from EntityAndRealtion import *
 
@@ -7,7 +11,7 @@ from Recommend import Recommendation
 from Multimedia import Multimedia
 from transformers import pipeline
 from HumanOrMovie import humanOrFilm
-from loadData import entLabelList  #, predAlias
+from LoadData import entLabelList  #, predAlias
 #from crowd import crowd
 from Crowd import checkCrowdER
 
@@ -15,6 +19,7 @@ from Crowd import checkCrowdER
 class msgP:
     def __init__(self, message):
         self.message = message
+        self.entURI = []
 
     # parse the message and get entity
     def parseEnt(self, graph):
@@ -22,36 +27,39 @@ class msgP:
         # classify the message
         entitylist = getEnt(self.message)
         print(entitylist)
+  #      if "recommend" not in self.message.lower():
+  #          if entitylist[0].startswith('Star Wars'):
+  #              newentitylist = " ".join(entitylist)
+  #              entitylist = [newentitylist]
         entList = []
+        print("entlist:", entitylist)
         for idx, entity in enumerate(entitylist):
             # check if URI exist
-            entURI = getEntURI(graph, entity)
-            print("entURI:", entURI)
+            self.entURI = getEntURI(graph, entity)
             # if exist, then append entity label
-            if len(entURI) != 0:
+            if len(self.entURI) != 0:
                 print('entURI exist')
                 entList.append(entity)
             # if not, then query typo
             else:
                 print('entURI does not exist')
-                entTypoCorr = checkTypo(entLabelList, entity)
-                print('typo corrected as: ', entTypoCorr)
-                entTypoURI = getEntURI(graph, entTypoCorr)
-                print('typoCorr URI: ', entTypoURI)
-                if len(entTypoURI) != 0:
-                    entList.append(entTypoCorr)
+        #        entTypoCorr = checkTypo(entLabelList, entity)
+        #        print('typo corrected as: ', entTypoCorr)
+        #        entTypoURI = getEntURI(graph, entTypoCorr)
+        #        print('typoCorr URI: ', entTypoURI)
+        #        if len(entTypoURI) != 0:
+        #            entList.append(entTypoCorr)
         print(entList)
         return entList
 
     def parseRel(self, entity, graph, WDT):
-        relationList, tbd = getRel(self.message)
-        print("parseRel", entity, relationList, tbd)
-        if tbd == True:
-            relationList = tbdRel(relationList)
+        relationList = getRel(self.message)
+        print("parseRel", entity, relationList)
         if 'recommend' not in relationList:
             relList = []
             for idx, relation in enumerate(relationList):
                 print("relation:", relation)
+
                 relURI = getRelURI(graph, relation, WDT)
                 print("relURI: ", relURI)
                 if len(relURI) != 0:
@@ -67,25 +75,31 @@ class msgP:
         else:
             relList = ['recommend']
         return relList
+
         # parse the message and get the response
     def parseMsg(self, graph, WDT, WD, images):
         entities = self.parseEnt(graph)
         relations = self.parseRel(entities, graph, WDT)
         print("parseMsg", entities, relations)
+        print(self.message)
 
         answer_template = "Sorry, there seems no answer to your question. Please try to rephrase or simplify your question."
 
-        # for showing images
+        # check if there image for the entity
         noPic = 'picture' not in self.message.lower()
-        noFrame = 'frame' not in self.message.lower()
-        noPoster = 'poster' not in self.message.lower()
         noImage = 'image' not in self.message.lower()
-        notPicture = noPic and noFrame and noPoster and noImage
+        noPhoto = 'photo' not in self.message.lower()
+        noLookLike = 'look like' not in self.message.lower()
+        noLooksLike = "looks like"not in self.message.lower()
+        notPicture = noPic and noImage and noPhoto and noLookLike and noLooksLike
+        print("is not picture",notPicture)
 
-        # fact-oriented questions
-        # if one entity, one relation
+
+
+        ## Factual Questions
+        # check if one entity, one relation
         if len(entities) == 1 and len(relations) == 1 and 'recommend' not in relations and notPicture:
-            print("case1")
+            print("One ent one rel (Factual Questions)")
             entity = entities[0]
             relation = relations[0]
 #            incrowd, rate, lbl, cnt1, lblRev, cnt2 = checkCrowdER(entity, relation, graph, WDT, WD,
@@ -93,7 +107,6 @@ class msgP:
 #                                                                  crowd.aggAns, crowd.numCnt, crowd.irate)
 #           print('crowd')
 #           print('crowd, rate, lbl,cnt1,lblRev,cnt2: ', incrowd, rate, lbl, cnt1, lblRev, cnt2)
-            print(entity, relation)
             relid = getRelWDTid(graph, WDT, relation)
             res = []
             # query with relid and entity label
@@ -101,11 +114,17 @@ class msgP:
                 query_template = query_template1.format(entity, relid[0])
                 res = set(graph.query(query_template))
                 print(res, len(res))
-
             if len(res) == 0:
                 answer_template = "Sorry, there seems no answer to your question. Please try to rephrase or simplify your question."
                 print(answer_template)
+                # Check if embedding question
+                embedAnds = self.checkEmbed(WD, entity.uri, relation)
+                for ans in embedAnds:
+                    answer_template = ans
+                    print(answer_template)
             else:
+                # TODO: maybe delete
+                print("What the hell is goin OOOOOOOON res:", res)
                 # parse res set into list of strings
                 answers = []
                 for row in res:
@@ -127,7 +146,8 @@ class msgP:
                 print(answer_template)
 
         # if two entities
-        if len(entities) == 2 and notPicture:
+
+        if len(entities) == 2 and notPicture and 'recommend' not in relations:
             print("case2")
             print(entities[1])
             query1 = query_template2.format(entities[0], entities[1])
@@ -160,65 +180,49 @@ class msgP:
                 print(answer_template)
 
         # recommendation
-        if 'recommend' in relations and len(entities) == 1:
+        if 'recommend' in relations:
+            answer_templates = ['Here are the recommendations: {}, {}, or {}.', 'You may like: {}, {}, or {}.', 'I recommend: {}, {}, or {}.']
             rcm = Recommendation()
-            rcmds = []
             entity = entities[0]
-            sentiment_pipeline = pipeline('text-classification',
-                                          model='distilbert-base-uncased-finetuned-sst-2-english')
-            label = sentiment_pipeline(self.message)[0]['label']
 
-            human, film = humanOrFilm(graph, entity)
+          #TODO delete tis shi
 
-            if human:
-                pos_tokens = getTokens(self.message)
-                target = returnNAfRcmd(pos_tokens)
-                if label == 'POSITIVE':
-                    print("ishuman,positive,target is: ", target)
-                    rcmds = rcm.posRcmHuman(entity, target, graph)
-                elif label == 'NEGATIVE':
-                    print("ishuman,negative,target is: ", target)
-                #     rcmds = rcm.negRcmHuman(entity,target)
-            if film:
-                if label == 'POSITIVE':
-                    print("isfilm,positive")
-                    rcmds = rcm.posRcmFilm(entity)
-                elif label == 'NEGATIVE':
-                    print("isfilm,negative")
-                    # rcmds = rcm.negRcmFilm(entity)
-
-            answer_template = 'Here are the recommendations {}'.format(rcmds)
+#        # from  Tutorial: Using Pretrained Transformer Architectures
+#        sentiment_pipeline = pipeline('text-classification',
+#                                      model='distilbert-base-uncased-finetuned-sst-2-english')
+#        label = sentiment_pipeline(self.message)[0]['label']
+#
+            rcmds = rcm.posRcmFilm(entity)
+            answer_template = answer_templates[random.randint(0, len(answer_templates)-1)].format(rcmds.pop(random.randint(0,len(rcmds)-1)), rcmds.pop(random.randint(0,len(rcmds)-1)), rcmds.pop(random.randint(0,len(rcmds)-1)))
             print(answer_template)
 
-        # show picture
+        # Image Question
         if not notPicture:
-            mutliM = Multimedia()
+            mutli_m = Multimedia()
             print("Show Pictures")
-            if not noPoster:
-                # assume here return movie pic
-                if len(entities) != 0:
-                    entity = entities[0]
-                    human, film = humanOrFilm(graph, entity)
-                    if human:
-                        answer_template = "Only movie has poster, please reinput."
-                    elif film:
-                        print("Show Poster")
-                        imgids = mutliM.showPoster(entity, graph, images)
-                        print(imgids)
-                        if len(imgids) > 0:
-                            answer_template = "Hi, this is the poster you requested.{}".format(imgids[0])
-                        else:
-                            answer_template = "Sorry, I can't find the picture you requested."
-                elif len(entities) == 0:
-                    # return poster of random movie genre
-                    tokens = getTokens(self.message)
-                    genre = returnNounBfMovie(tokens)
-                    imgid = mutliM.showGenrePoster(graph, images, genre)
-                    print(imgid)
-                    answer_template = "Hi, this is the poster you requested.{}".format(imgid)
+     #       if not noPoster:
+     #           if len(entities) != 0:
+     #               entity = entities[0]
+     #               human, film = humanOrFilm(graph, entity)
+     #               if human:
+     #                   answer_template = "Only movie has poster, please reinput."
+     #               elif film:
+     #                   print("Show Poster")
+     #                   imgids = mutli_m.showPoster(entity, graph, images)
+     #                   print(imgids)
+     #                   if len(imgids) > 0:
+     #                       answer_template = imgids[0]
+     #                   else:
+     #                       answer_template = "Sorry, I can't find the picture you requested."
+     #           elif len(entities) == 0:
+     #               # return poster of random movie genre
+     #               tokens = getTokens(self.message)
+     #               genre = returnNounBfMovie(tokens)
+     #               imgid = mutli_m.showGenrePoster(graph, images, genre)
+     #               print(imgid)
+     #               answer_template = imgid
 
-            elif not noPic or not noImage:
-                # assume here return human pic
+            if not noPic or not noImage or not noPhoto or not noLookLike or not noLooksLike:
                 print("Show pic or image")
                 if len(entities) != 0:
                     entity = entities[0]
@@ -226,18 +230,18 @@ class msgP:
 
                     if human:
                         print("Show picture related to human")
-                        imgids = mutliM.showPicwHumanInp(entity, graph, images)
-                        print(imgids)
+                        imgids = mutli_m.showPicwHumanInp(entity, graph, images)
+                        print("imgids ", imgids)
                         if len(imgids) > 0:
-                            answer_template = "Hi, this is the picture you requested.{}".format(imgids[0])
+                            answer_template = imgids[0]
                         else:
                             answer_template = "Sorry, I can't find the picture you requested."
                     elif film:
                         print("Show picture related to film")
-                        imgids = mutliM.showPicwFilmInp(entity, graph, images)
+                        imgids = mutli_m.showPicwFilmInp(entity, graph, images)
                         # print(imgids)
                         if len(imgids) > 0:
-                            answer_template = "Hi, this is the picture you requested.{}".format(imgids[0])
+                            answer_template = imgids[0]
                         else:
                             answer_template = "Sorry, I can't find the picture you requested."
                         print(answer_template)
@@ -246,12 +250,27 @@ class msgP:
                     # return pic of random movie genre
                     tokens = getTokens(self.message)
                     genre = returnNounBfMovie(tokens)
-                    imgid = mutliM.showGenrePoster(graph, images, genre)
+                    imgid = mutli_m.showGenrePoster(graph, images, genre)
                     print(imgid)
                     answer_template = "Hi, this is the poster you requested.{}".format(imgid)
 
-            elif not noFrame:
-                print("Show frame")
-                answer_template = "Hi, this is the frame you requested.{}".format(imgids)
-
         return answer_template
+
+    def checkEmbed(self, WD,entity, relation):
+        head = entity_emb[ent2id[entity]]
+        # "occupation" relation
+        pred = relation_emb[rel2id[relation]]
+        # add vectors according to TransE scoring function.
+        lhs = head + pred
+        # compute distance to *any* entity
+        dist = pairwise_distances(lhs.reshape(1, -1), entity_emb).reshape(-1)
+        # find most plausible entities
+        most_likely = dist.argsort()
+        # compute ranks of entities
+        ranks = dist.argsort().argsort()
+        ans = pd.DataFrame([
+            (id2ent[idx][len(WD):], ent2lbl[id2ent[idx]], dist[idx], rank + 1)
+            for rank, idx in enumerate(most_likely[:10])],
+            columns=('Entity', 'Label', 'Score', 'Rank'))
+        return list(ans['Label'])
+        # returns the wrong one

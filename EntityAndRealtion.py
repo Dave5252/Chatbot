@@ -1,10 +1,18 @@
 import nltk, re, editdistance
-from transformers import pipeline
 from sklearn.metrics import pairwise_distances
+# from https://huggingface.co/Jean-Baptiste/camembert-ner
+from transformers import AutoTokenizer, AutoModelForTokenClassification
 
-ner = pipeline('ner')
+tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner")
+model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner")
 
+# Process text sample (from wikipedia)
 
+from transformers import pipeline
+
+ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
+
+# tokenized question
 def getTokens(question):
     tokens = nltk.word_tokenize(question)
     pos_tokens = nltk.pos_tag(tokens)
@@ -57,6 +65,16 @@ def getEnt(question):
 
 def getEntURI(graph, entity):
     # entity label to URIs
+
+    print( '''
+        prefix wdt: <http://www.wikidata.org/prop/direct/>
+        prefix wd: <http://www.wikidata.org/entity/>
+
+        SELECT ?sujU
+        WHERE{{
+            ?sujU rdfs:label "{}"@en.
+            }}'''.format(entity))
+
     query_entURI = '''
         prefix wdt: <http://www.wikidata.org/prop/direct/>
         prefix wd: <http://www.wikidata.org/entity/>
@@ -92,6 +110,7 @@ def checkTypo(entLblList, entity):
     entTypoCorr = entLblList[matchnode]
     return entTypoCorr
 
+
 # TODO delete this method
 def getNearestEntEmb(WD, ent2id, ent2lbl, lbl2ent, id2ent, entity_emb, word):
     ent = ent2id[lbl2ent[word]]
@@ -104,6 +123,7 @@ def getNearestEntEmb(WD, ent2id, ent2lbl, lbl2ent, id2ent, entity_emb, word):
         qids.append(id2ent[idx][len(WD):])
         lbls.append(ent2lbl[id2ent[idx]])
     return qids, lbls
+
 
 # TODO delete this method
 def clarifyEnt(qids, lbls):
@@ -141,34 +161,26 @@ def theOfTokens(question):
         relation = matching.group(1)
         return [relation]
 
-    # main method for getting relation
+# Get relation relation
 def getRel(question):
     theOf = theOfTokens(question)
     if not theOf:
-        tbd = True
         pos_tokens = getTokens(question)
         verbs = returnVerbs(pos_tokens)
         relations = verbs
     else:
-        tbd = False
         relations = theOf
+     # Hard coded relation, since it vant detect it
     if "recommend" in question.lower():
         relations = ['recommend']
     if "directed" in question.lower():
         relations = ['director']
     if "director" in question.lower():
         relations = ['director']
-    return relations, tbd
-
-    # check if recommend in relation
-def tbdRel(relation):
-    if 'recommend' in relation:
-        return ['recommend']
-    return relation
+    return relations
 
 # search for alias of relation in predAlias dictionary
 def searchAlias(relation, predAlias):
-
     swdtPropList = []
     for idx, alt in enumerate(predAlias['propertyAltLabel']):
         # print(idx,alt)
@@ -228,6 +240,3 @@ def getRelIdByURI(WDT, relURIList):
             relId = re.search(wdtIdPattern, row).group(1)
             relIds.append(relId)
     return relIds
-
-
-
