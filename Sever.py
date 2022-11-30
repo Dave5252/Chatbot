@@ -31,7 +31,7 @@ class Server:
                     if not self.chat_state[room_id]['initiated']:
                         # send a welcome message and get the alias of the agent in the chatroom
                         self.post_message(room_id=room_id, session_token=self.session_token,
-                                          message='Whats up withit vanilla face, you can send me any message and check if it is echoed in {} seconds.'.format(
+                                          message='Whats up withit, you can send me any message and check if it is echoed in {} seconds.'.format(
                                               listen_freq))
                         self.chat_state[room_id]['initiated'] = True
                         self.chat_state[room_id]['my_alias'] = room['alias']
@@ -80,7 +80,8 @@ class Server:
 
     def post_message(self, room_id: str, session_token: str, message: str):
         tmp_des = requests.post(url=url + "/api/room/{}".format(room_id),
-                                params={"roomId": room_id, "session": session_token}, data=message).json()
+                                params={"roomId": room_id, "session": session_token},
+                                data=message.encode('utf-8')).json()
         if tmp_des['description'] != 'Message received':
             print('\t\t Error: failed to post message: {}'.format(message))
 
@@ -91,7 +92,6 @@ class Server:
         if requests.get(url=url + "/api/logout", params={"session": self.session_token}).json()[
             'description'] == 'Logged out':
             print('- Session \'{}\' successfully logged out!'.format(self.session_token))
-    #
 
 
 if __name__ == '__main__':

@@ -6,11 +6,10 @@ from transformers import AutoTokenizer, AutoModelForTokenClassification
 tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner")
 model = AutoModelForTokenClassification.from_pretrained("Jean-Baptiste/camembert-ner")
 
-# Process text sample (from wikipedia)
-
 from transformers import pipeline
 
 ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
+
 
 # tokenized question
 def getTokens(question):
@@ -29,7 +28,7 @@ def returnNouns(pos_tokens):
         nouns.append(pos_tokens[idx][0])
     return nouns
 
-
+#TODO delete this method
 def returnNAfRcmd(pos_tokens):
     idxlist = []
     words = []
@@ -52,7 +51,7 @@ def returnNounBfMovie(pos_tokens):
     for idx, tup in enumerate(pos_tokens):
         if idx == movieIdx - 1 and "NN" in tup[1]:
             genre = pos_tokens[idx][0]
-    return genre
+            return genre
 
 
 def getEnt(question):
@@ -66,7 +65,7 @@ def getEnt(question):
 def getEntURI(graph, entity):
     # entity label to URIs
 
-    print( '''
+    print('''
         prefix wdt: <http://www.wikidata.org/prop/direct/>
         prefix wd: <http://www.wikidata.org/entity/>
 
@@ -91,6 +90,7 @@ def getEntURI(graph, entity):
     return entURIs
 
 
+# helper function to get the ID of the entity
 def getEntIdByURI(WD, entURI):
     entId = []
     if WD in entURI:
@@ -132,11 +132,6 @@ def clarifyEnt(qids, lbls):
     return qid, lbl
 
 
-def getTokens(question):
-    tokens = nltk.word_tokenize(question)
-    pos_tokens = nltk.pos_tag(tokens)
-    return pos_tokens
-
 
 def returnVerbs(pos_tokens):
     idxlist = []
@@ -161,6 +156,7 @@ def theOfTokens(question):
         relation = matching.group(1)
         return [relation]
 
+
 # Get relation relation
 def getRel(question):
     theOf = theOfTokens(question)
@@ -170,7 +166,7 @@ def getRel(question):
         relations = verbs
     else:
         relations = theOf
-     # Hard coded relation, since it vant detect it
+    # Hard coded relation, since it wont detect it otherwise
     if "recommend" in question.lower():
         relations = ['recommend']
     if "directed" in question.lower():
@@ -179,6 +175,7 @@ def getRel(question):
         relations = ['director']
     return relations
 
+# TODO delete this method
 # search for alias of relation in predAlias dictionary
 def searchAlias(relation, predAlias):
     swdtPropList = []

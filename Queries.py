@@ -8,7 +8,7 @@ queryLabel = '''
         wd:{} rdfs:label ?label.
         }}'''
 
-# query one entity and on relation, find the other entity qid
+# query one entity and one relation, find the other entity qid
 query_template1 = '''
     prefix wdt: <http://www.wikidata.org/prop/direct/>
     prefix wd: <http://www.wikidata.org/entity/>
