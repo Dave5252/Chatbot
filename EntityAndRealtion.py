@@ -1,4 +1,4 @@
-import nltk, re, editdistance
+import nltk, re
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 
 tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner")
@@ -9,14 +9,46 @@ from transformers import pipeline
 ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
 
 
+# parse the message and get entity
+def parseEnt(self, graph):
+    # classify the message
+    entitylist = getEnt(self.message)
+    entList = []
+    print("Entity list:", entitylist)
+    for entity in entitylist:
+        # check if URI exist
+        self.entURI = getEntURI(graph, entity)
+        # if exist, then append entity label
+        if len(self.entURI) != 0:
+            print('entURI exist')
+            entList.append(entity)
+        # if not, then query typo
+        else:
+            print('entURI does not exist')
+    print(entList)
+    return entList
+
+
+# parse the relation
+def parseRel(self, entity, graph, WDT):
+    relationList = getRel(self.message)
+    print("parseRel", entity, relationList)
+    if 'recommend' not in relationList:
+        relationListToReturn = []
+        for relation in relationList:
+            print("relation:", relation)
+            relURI = getRelURI(graph, relation, WDT)
+            if len(relURI) != 0:
+                relationListToReturn.append(relation)
+            # if not, then query alias
+            else:
+                print('relURI does not exist')
+
+    else:
+        relationListToReturn = ['recommend']
+    return relationListToReturn
 # tokenized question
 def tokenize(question):
-    from transformers import AutoTokenizer
-
-    model_checkpoint = "distilbert-base-uncased"
-    tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
-    tokensss = tokenizer.tokenize(question)
-    print("tokensssssssss: ", tokensss)
     tokens = nltk.word_tokenize(question)
     pos_tokens = nltk.pos_tag(tokens)
     return pos_tokens
@@ -89,7 +121,6 @@ def getEntIdByURI(WD, entURI):
     return entId
 
 
-
 def returnVerbs(pos_tokens):
     idxlist = []
     verbTokens = []
@@ -104,10 +135,8 @@ def returnVerbs(pos_tokens):
 
 
 def theOfTokens(question):
-    theOfPattern = "the (.*) of"
-    matching = re.search(theOfPattern, question)
+    matching = re.search("the (.*) of", question)
     if not matching:
-        print("no match for the of pattern")
         return False
     else:
         relation = matching.group(1)
@@ -132,15 +161,18 @@ def getRel(question):
         relations = ['director']
     return relations
 
-    # get relation pid by relation labels
 
-
+# get relation pid by relation labels
 def getRelWDTid(graph, WDT, relations):
     relURIList = getRelURI(graph, relations, WDT)
-    relIds = getRelIdByURI(WDT, relURIList)
+    relIds = []
+    for idx, row in enumerate(relURIList):
+        print("idx: ", idx, "row: ", row)
+        if WDT in row:
+            wdtIdPattern = "{}(.*)".format(WDT)
+            relId = re.search(wdtIdPattern, row).group(1)
+            relIds.append(relId)
     return relIds
-
-    # query for relation URI with relation label as input
 
 
 def getRelURI(graph, relation, WDT):
@@ -160,14 +192,3 @@ def getRelURI(graph, relation, WDT):
             relURIs.append(str(relURI[0]))
     return relURIs
 
-
-def getRelIdByURI(WDT, relURIList):
-    # get Rel WDTid
-    relIds = []
-    for idx, row in enumerate(relURIList):
-        print("idx: ", idx, "row: ", row)
-        if WDT in row:
-            wdtIdPattern = "{}(.*)".format(WDT)
-            relId = re.search(wdtIdPattern, row).group(1)
-            relIds.append(relId)
-    return relIds
