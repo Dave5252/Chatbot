@@ -1,6 +1,4 @@
 import nltk, re, editdistance
-from sklearn.metrics import pairwise_distances
-# from https://huggingface.co/Jean-Baptiste/camembert-ner
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 
 tokenizer = AutoTokenizer.from_pretrained("Jean-Baptiste/camembert-ner")
@@ -12,7 +10,13 @@ ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="si
 
 
 # tokenized question
-def getTokens(question):
+def tokenize(question):
+    from transformers import AutoTokenizer
+
+    model_checkpoint = "distilbert-base-uncased"
+    tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+    tokensss = tokenizer.tokenize(question)
+    print("tokensssssssss: ", tokensss)
     tokens = nltk.word_tokenize(question)
     pos_tokens = nltk.pos_tag(tokens)
     return pos_tokens
@@ -27,20 +31,6 @@ def returnNouns(pos_tokens):
     for idx in idxlist:
         nouns.append(pos_tokens[idx][0])
     return nouns
-
-#TODO delete this method
-def returnNAfRcmd(pos_tokens):
-    idxlist = []
-    words = []
-    recIdx = 999
-    for idx, tup in enumerate(pos_tokens):
-        if "recommend" in tup[0].lower():
-            recIdx = idx
-        if idx > recIdx and "NN" in tup[1]:
-            idxlist.append(idx)
-    for idx in idxlist:
-        words.append(pos_tokens[idx][0])
-    return words
 
 
 def returnNounBfMovie(pos_tokens):
@@ -99,39 +89,6 @@ def getEntIdByURI(WD, entURI):
     return entId
 
 
-def checkTypo(entLblList, entity):
-    entTypoCorr = []
-    threshold = 9999
-    for idx, entlbl in enumerate(entLblList):
-        dist = editdistance.eval(entity, entlbl)
-        if dist < threshold:
-            threshold = dist
-            matchnode = idx
-    entTypoCorr = entLblList[matchnode]
-    return entTypoCorr
-
-
-# TODO delete this method
-def getNearestEntEmb(WD, ent2id, ent2lbl, lbl2ent, id2ent, entity_emb, word):
-    ent = ent2id[lbl2ent[word]]
-    emb = entity_emb[ent]
-    dist = pairwise_distances(emb.reshape(1, -1), entity_emb).reshape(-1)
-    most_likely = dist.argsort()
-    qids = []
-    lbls = []
-    for rank, idx in enumerate(most_likely[:15]):
-        qids.append(id2ent[idx][len(WD):])
-        lbls.append(ent2lbl[id2ent[idx]])
-    return qids, lbls
-
-
-# TODO delete this method
-def clarifyEnt(qids, lbls):
-    qid = qids[10]
-    lbl = lbls[10]
-    return qid, lbl
-
-
 
 def returnVerbs(pos_tokens):
     idxlist = []
@@ -161,7 +118,7 @@ def theOfTokens(question):
 def getRel(question):
     theOf = theOfTokens(question)
     if not theOf:
-        pos_tokens = getTokens(question)
+        pos_tokens = tokenize(question)
         verbs = returnVerbs(pos_tokens)
         relations = verbs
     else:
@@ -174,29 +131,6 @@ def getRel(question):
     if "director" in question.lower():
         relations = ['director']
     return relations
-
-# TODO delete this method
-# search for alias of relation in predAlias dictionary
-def searchAlias(relation, predAlias):
-    swdtPropList = []
-    for idx, alt in enumerate(predAlias['propertyAltLabel']):
-        # print(idx,alt)
-        if isinstance(alt, str):
-            listAlt = list(alt.split(', '))
-        # print(listAlt)
-        if relation in listAlt:
-            pd = predAlias.iloc[[idx]]
-            wdtProp = pd['propertyLabel']
-            swdtProp = wdtProp[pd.index.values[0]]
-            swdtPropList.append(swdtProp)
-        elif predAlias.iloc[idx].str.contains(relation)['propertyAltLabel'] and isinstance(
-                predAlias.iloc[idx]['propertyAltLabel'], str):
-            pd = predAlias.iloc[[idx]]
-            wdtProp = pd['propertyLabel']
-            swdtProp = wdtProp[pd.index.values[0]]
-            swdtPropList.append(swdtProp)
-
-    return swdtPropList
 
     # get relation pid by relation labels
 
