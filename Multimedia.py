@@ -17,11 +17,11 @@ class Multimedia:
                 imdbIds.append(imdbId)
         filmsList = []
         print(imdbIds)
-        for idx, imdbid in enumerate(imdbIds):
+        for imdbid in imdbIds:
             films = list(filter(lambda film: film['cast'] == [imdbid], images))
             filmsList += films
         imgids = []
-        for idx, film in enumerate(filmsList):
+        for film in filmsList:
             imgid = film['img']
             imgids.append('image:' + imgid.strip('.jpg'))
         print(imgids)

@@ -5,21 +5,28 @@ import pandas as pd
 class Crowd:
     # load crowdsource data
     crowdSource = pd.read_csv(r'C:\Users\David\Desktop\Chatbot\Data\crowd_data.tsv', sep='\t')
-
-    # filter out malicious workers by worker's rate
-    workTime = crowdSource.filter(['HITId', 'WorkTimeInSeconds', 'WorkerId'], axis=1)
-    malHits = workTime.loc[workTime.groupby('HITId')['WorkTimeInSeconds'].idxmin()]
-    malWorkers = malHits['WorkerId'].unique()
-    cleanedData = crowdSource
-    for idx, malWk in enumerate(malWorkers):
+    # filter out malicious workers by their WorkTimeInSeconds
+    workTimeAndApprovalRate = crowdSource.filter(['HITId', 'WorkTimeInSeconds', 'WorkerId', 'LifetimeApprovalRate'], axis=1)
+    workTimeAndApprovalRate['LifetimeApprovalRate'] = workTimeAndApprovalRate['LifetimeApprovalRate'].str.replace('%', '').astype(float)
+    malHits = workTimeAndApprovalRate.loc[workTimeAndApprovalRate.groupby('HITId')['WorkTimeInSeconds'].idxmin()]
+    # Filter out malicious workers by their LifetimeApprovalRate
+    malAllTimeRat = workTimeAndApprovalRate.loc[workTimeAndApprovalRate.groupby('HITId')['LifetimeApprovalRate'].idxmin()]
+    maliWorkers = malHits['WorkerId'].unique()
+    cleanData = crowdSource
+    for malWk in maliWorkers:
         # drop all malicious workers from the crowd data
-        cleanedData = cleanedData.drop(cleanedData[(cleanedData['WorkerId'] == malWk)].index)
-
+        cleanedData = cleanData.drop(cleanData[(cleanData['WorkerId'] == malWk)].index)
+    # drop all HITs that have low rating
+    maliWorkers = malAllTimeRat['WorkerId'].unique()
+    cleanData2 = cleanedData
+    for malWk in maliWorkers:
+        # drop all malicious workers from the crowd data
+        cleanedDataFinal = cleanData2.drop(cleanData2[(cleanData2['WorkerId'] == malWk)].index)
     # aggregate worker answers and get the answer
-    aggAns = cleanedData.groupby('HITId')['AnswerLabel'].agg(pd.Series.mode).to_frame()
+    aggAns = cleanedDataFinal.groupby('HITId')['AnswerLabel'].agg(pd.Series.mode).to_frame()
 
     # count number of pros and cons and compute inter-rater rate
-    zdf = cleanedData.filter(['HITId', 'AnswerLabel'])
+    zdf = cleanedDataFinal.filter(['HITId', 'AnswerLabel'])
     numCnt = zdf.groupby('HITId')['AnswerLabel'].value_counts().to_frame()
     counts = zdf.groupby('HITId')['AnswerLabel'].value_counts('counts').to_frame()
     irate = counts.groupby('HITId')['AnswerLabel'].max()
@@ -73,7 +80,6 @@ class Crowd:
                         cnt2 = numCnt.iloc[idx]['AnswerLabel']
                 rate = irate.iloc[hitid - 1]
 
-
             else:
                 incrowd = False
         else:
@@ -81,7 +87,8 @@ class Crowd:
 
         return incrowd, rate, lbl, cnt1, lblRev, cnt2
 
-    # this methdo deals with two entities as input
+    # this method deals with two entities as input
+    # TODO: delete this method
     def checkCrowdEE(self, entity1, entity2, graph, WDT, WD, cleanCrowd, aggAns, numCnt, irate):
         entURI1 = getEntURI(graph, entity1)
         entid1 = getEntIdByURI(WD, entURI1[0])

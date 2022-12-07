@@ -53,10 +53,10 @@ class Server:
                                                                                             message['message'],
                                                                                             self.get_time()))
 
-                                self.post_message(room_id=room_id, session_token=self.session_token,
-                                                  message='Whats poppin my G, Got your messag: \'{}\' at {}.'.format(
-                                                      message['message'],
-                                                      self.get_time()))
+                              # self.post_message(room_id=room_id, session_token=self.session_token,
+                              #                   message='Whats poppin my G, Got your messag: \'{}\' at {}.'.format(
+                              #                       message['message'],
+                              #                       self.get_time()))
                                 msgp = msgP(message["message"])
                                 response = msgp.parseMsg(graph, WDT, WD, images)
 

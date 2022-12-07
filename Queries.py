@@ -46,41 +46,6 @@ query_template3 = '''
         ?rel rdfs:label ?relL
         }}'''
 
-# query: given entity, check entity is instance of human   
-isHumanTemp = '''
-    prefix wdt: <http://www.wikidata.org/prop/direct/>
-    prefix wd: <http://www.wikidata.org/entity/>
-
-    SELECT ?rel
-    WHERE {{
-        ?sujU rdfs:label "{}"@en.
-        ?sujU ?rel wd:Q5 .
-        }}'''
-
-# query: given entity, check entity is instance of film   
-isFilmTemp = '''
-    prefix wdt: <http://www.wikidata.org/prop/direct/>
-    prefix wd: <http://www.wikidata.org/entity/>
-
-    SELECT ?rel
-    WHERE {{
-        ?sujU rdfs:label "{}"@en.
-        ?sujU ?rel wd:Q11424 .
-        }}'''
-
-
-imdbIdTemp = '''
-    prefix wdt: <http://www.wikidata.org/prop/direct/>
-    prefix wd: <http://www.wikidata.org/entity/>
-
-    SELECT ?imdb WHERE {{
-        ?qid rdfs:label "{}"@en .
-        ?qid wdt:P345 ?imdb .
-        FILTER(STRSTARTS(str(?imdb), "tt")) .
-    }}'''
-
-
-
 # query: given human name search for imdbid
 humanImdbIdTemp = '''
     prefix wdt: <http://www.wikidata.org/prop/direct/>

@@ -8,52 +8,13 @@ from transformers import pipeline
 
 ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
 
-
-# parse the message and get entity
-def parseEnt(self, graph):
-    # classify the message
-    entitylist = getEnt(self.message)
-    entList = []
-    print("Entity list:", entitylist)
-    for entity in entitylist:
-        # check if URI exist
-        self.entURI = getEntURI(graph, entity)
-        # if exist, then append entity label
-        if len(self.entURI) != 0:
-            print('entURI exist')
-            entList.append(entity)
-        # if not, then query typo
-        else:
-            print('entURI does not exist')
-    print(entList)
-    return entList
-
-
-# parse the relation
-def parseRel(self, entity, graph, WDT):
-    relationList = getRel(self.message)
-    print("parseRel", entity, relationList)
-    if 'recommend' not in relationList:
-        relationListToReturn = []
-        for relation in relationList:
-            print("relation:", relation)
-            relURI = getRelURI(graph, relation, WDT)
-            if len(relURI) != 0:
-                relationListToReturn.append(relation)
-            # if not, then query alias
-            else:
-                print('relURI does not exist')
-
-    else:
-        relationListToReturn = ['recommend']
-    return relationListToReturn
 # tokenized question
 def tokenize(question):
     tokens = nltk.word_tokenize(question)
     pos_tokens = nltk.pos_tag(tokens)
     return pos_tokens
 
-
+# TODO: delete this method
 def returnNouns(pos_tokens):
     idxlist = []
     nouns = []
@@ -64,7 +25,7 @@ def returnNouns(pos_tokens):
         nouns.append(pos_tokens[idx][0])
     return nouns
 
-
+# TODO: delete this method
 def returnNounBfMovie(pos_tokens):
     movieIdx = 0
     for idx, tup in enumerate(pos_tokens):
@@ -79,7 +40,7 @@ def returnNounBfMovie(pos_tokens):
 def getEnt(question):
     entities = ner(question, aggregation_strategy="simple")
     entList = []
-    for idx, ent in enumerate(entities):
+    for ent in entities:
         entList.append(ent["word"])
     return entList
 
@@ -106,7 +67,7 @@ def getEntURI(graph, entity):
             }}'''.format(entity)
     entURIList = list(graph.query(query_entURI))
     entURIs = []
-    for idx, entURI in enumerate(entURIList):
+    for entURI in entURIList:
         entURIs.append(str(entURI[0]))
     print("entURI: ", entURIs)
     return entURIs
@@ -166,8 +127,8 @@ def getRel(question):
 def getRelWDTid(graph, WDT, relations):
     relURIList = getRelURI(graph, relations, WDT)
     relIds = []
-    for idx, row in enumerate(relURIList):
-        print("idx: ", idx, "row: ", row)
+    for row in relURIList:
+        print("row: ", row)
         if WDT in row:
             wdtIdPattern = "{}(.*)".format(WDT)
             relId = re.search(wdtIdPattern, row).group(1)
@@ -186,7 +147,7 @@ def getRelURI(graph, relation, WDT):
                }}'''.format(relation)
     relURIList = list(graph.query(query_relURI))
     relURIs = []
-    for idx, relURI in enumerate(relURIList):
+    for relURI in relURIList:
         print(relURI)
         if WDT in str(relURI[0]):
             relURIs.append(str(relURI[0]))
