@@ -1,5 +1,47 @@
-from EntityAndRealtion import *
 import pandas as pd
+
+from EntityAndRealtion import getRelWDTid, getEntURI, getEntIdByURI
+
+import logging
+
+import numpy as np
+import json, csv, rdflib
+from rdflib.term import URIRef, Literal
+from Queries import queryLabel
+
+# %%
+# define some prefixes
+WD = rdflib.Namespace('http://www.wikidata.org/entity/')
+WDT = rdflib.Namespace('http://www.wikidata.org/prop/direct/')
+DDIS = rdflib.Namespace('http://ddis.ch/atai/')
+RDFS = rdflib.namespace.RDFS
+SCHEMA = rdflib.Namespace('http://schema.org/')
+
+# %%
+# load the graph
+graph = rdflib.Graph().parse(r'C:\Users\David\Desktop\Chatbot\Data\14_graph.nt', format='turtle')
+# load the embeddings
+entity_emb = np.load(r'C:\Users\David\Desktop\Chatbot\Data\entity_embeds.npy')
+relation_emb = np.load(r'C:\Users\David\Desktop\Chatbot\Data\relation_embeds.npy')
+logging.info('Loading embeddings')
+# load the images
+# load the dictionaries
+with open(r'C:\Users\David\Desktop\Chatbot\Data\entity_ids.del', 'r') as ifile:
+    ent2id = {rdflib.term.URIRef(ent): int(idx) for idx, ent in csv.reader(ifile, delimiter='\t')}
+    id2ent = {v: k for k, v in ent2id.items()}
+with open(r'C:\Users\David\Desktop\Chatbot\Data\relation_ids.del', 'r') as ifile:
+    rel2id = {rdflib.term.URIRef(rel): int(idx) for idx, rel in csv.reader(ifile, delimiter='\t')}
+    id2rel = {v: k for k, v in rel2id.items()}
+# load the embeddings
+ent2lbl = {ent: str(lb) for ent, lb in graph.subject_objects(RDFS.label)}
+lbl2ent = {lb: ent for ent, lb in ent2lbl.items()}
+entities = set(graph.subjects()) | {s for s in graph.objects() if isinstance(s, URIRef)}
+# all subjects and the objects which isinstance of URIRef are entities
+predicates = set(graph.predicates())
+literals = {s for s in graph.objects() if isinstance(s, Literal)}
+
+
+# %%
 class Crowd:
     # load crowdsource data
     crowdSource = pd.read_csv(r'C:\Users\David\Desktop\Chatbot\Data\crowd_data.tsv', sep='\t')
@@ -18,7 +60,7 @@ class Crowd:
     numCnt = zdf.groupby('HITId')['AnswerLabel'].value_counts().to_frame()
     counts = zdf.groupby('HITId')['AnswerLabel'].value_counts('counts').to_frame()
     irate = counts.groupby('HITId')['AnswerLabel'].max()
-
+# %%
     def searchInCrowd(self, entity, relation, graph, WDT, WD, cleanedCrowdDataSet, aggAns, numCnt, irate):
         isInCrowd = False
         relid = getRelWDTid(graph, WDT, relation)
@@ -66,15 +108,17 @@ class Crowd:
                         if not row["FixValue"] == "" or not row["FixPosition"].isna():
                             corrans[row["FixValue"]] = + 1
 
+
+
                 # calc of inter-rater agreement
                 batches = cleanedCrowdDataSet['HITTypeId'].unique()
                 for batch in batches:
                     corrInBatch = cleanedCrowdDataSet[
                         (cleanedCrowdDataSet.HITTypeId == batch) & (
-                                cleanedCrowdDataSet.AnswerLabel == 'CORRECT')].shape[0]
+                                    cleanedCrowdDataSet.AnswerLabel == 'CORRECT')].shape[0]
                     incorrInBatch = cleanedCrowdDataSet[
                         (cleanedCrowdDataSet.HITTypeId == batch) & (
-                                cleanedCrowdDataSet.AnswerLabel == 'INCORRECT')].shape[0]
+                                    cleanedCrowdDataSet.AnswerLabel == 'INCORRECT')].shape[0]
 
                 n_answer = corrInBatch + incorrInBatch
                 p_i = 1 / (n_answer * (n_answer - 1)) * (corrInBatch * (corr - 1) + incorrInBatch * (incorrInBatch - 1))
@@ -92,100 +136,24 @@ class Crowd:
                 g = set(graph.query("""prefix wdt: <http://www.wikidata.org/prop/direct/>
         prefix wd: <http://www.wikidata.org/entity/>
     SELECT DISTINCT * WHERE {
-      wd:Q181900 rdfs:label ?label . 
+      wd:{} rdfs:label ?label . 
       FILTER (langMatches( lang(?label), "en" ) )  
-    }"""))
+    }""".format(corrans)))
 
         return isInCrowd, p_i, lbl, corr, lblRev, incorr, corrans
-#class Crowd:
-#    # load crowdsource data
-#    crowdSource = pd.read_csv(r'C:\Users\David\Desktop\Chatbot\Data\crowd_data.tsv', sep='\t')
-#    # filter out malicious workers by their WorkTimeInSeconds
-#
-#    workTimeAndApprovalRate = crowdSource
-#    # workTimeAndApprovalRate = crowdSource.filter(['HITId', 'WorkTimeInSeconds', 'WorkerId', 'LifetimeApprovalRate'], axis=1)
-#    workTimeAndApprovalRate['LifetimeApprovalRate'] = workTimeAndApprovalRate['LifetimeApprovalRate'].str.replace('%',
-#                                                                                                                  '').astype(
-#        float)
-#    workTimeAndApprovalRate = workTimeAndApprovalRate.loc[workTimeAndApprovalRate['WorkTimeInSeconds'] > 10]
-#    # Filter out malicious workers by their LifetimeApprovalRate
-#    workTimeAndApprovalRate = workTimeAndApprovalRate.loc[workTimeAndApprovalRate['LifetimeApprovalRate'] > 50]
-#
-#    #  maliWorkers = malHits['WorkerId'].unique()
-#    #  cleanData = crowdSource
-#    #  for malWk in maliWorkers:
-#    #      # drop all malicious workers from the crowd data
-#    #      cleanedData = cleanData.drop(cleanData[(cleanData['WorkerId'] == malWk)].index)
-#    #  # drop all HITs that have low rating
-#    #  maliWorkers = malAllTimeRat['WorkerId'].unique()
-#    #  cleanData2 = cleanedData
-#    #  for malWk in maliWorkers:
-#    #      # drop all malicious workers from the crowd data
-#    #      cleanedDataFinal = cleanData2.drop(cleanData2[(cleanData2['WorkerId'] == malWk)].index)
-#    # aggregate worker answers and get the answer
-#    aggAns = workTimeAndApprovalRate.groupby('HITId')['AnswerLabel'].agg(pd.Series.mode).to_frame()
-#
-#    # count number of pros and cons and compute inter-rater rate
-#    zdf = workTimeAndApprovalRate.filter(['HITId', 'AnswerLabel'])
-#    numCnt = zdf.groupby('HITId')['AnswerLabel'].value_counts().to_frame()
-#    counts = zdf.groupby('HITId')['AnswerLabel'].value_counts('counts').to_frame()
-#    irate = counts.groupby('HITId')['AnswerLabel'].max()
-#
-#    # This method deals with one entity and one relation input and search in the cleaned crowd data if
-#    def searchInCrowd(self, entity, relation, graph, WDT, WD, cleanedCrowdDataSet, aggAns, numCnt, irate):
-#        relid = getRelWDTid(graph, WDT, relation)
-#        entURI = getEntURI(graph, entity)
-#        entid = getEntIdByURI(WD, entURI[0])
-#
-#        rate = 0
-#        lbl = 0
-#        lblRev = 0
-#        cnt1 = 0
-#        cnt2 = 0
-#        # check if entity and relation exist in crowd data
-#        if len(relid) != 0 and len(entid) != 0:
-#            wdtRelid = 'wdt:{}'.format(relid[0])
-#            wdtEntid = 'wd:{}'.format(entid)
-#            res1 = cleanedCrowdDataSet[(cleanedCrowdDataSet['Input2ID'] == wdtRelid) & (cleanedCrowdDataSet['Input1ID'] == wdtEntid)]
-#            res2 = cleanedCrowdDataSet[(cleanedCrowdDataSet['Input2ID'] == wdtRelid) & (cleanedCrowdDataSet['Input3ID'] == wdtEntid)]
-#            print("res1: ", res1)
-#            print("res2: ", res2)
-#            if not res1.empty or not res2.empty:
-#                print("IS IN CROWD")
-#                isInCrowd = True
-#                hitid = list(set.union(set(res1['HITId']), set(res2['HITId'])))[0]
-#                ans = aggAns.iloc[hitid - 1]
-#                print("ans: ", ans)
-#                lbl = ans['AnswerLabel']
-#                print("THE lbl: ", lbl)
-#                #lbl = list(lbl)
-#                if lbl == 'CORRECT':
-#                    print('1')
-#                    lblRev = 'INCORRECT'
-#                elif lbl == 'INCORRECT':
-#                    print('2')
-#                    lblRev = 'CORRECT'
-#                elif lbl == ['CORRECT', 'INCORRECT']:
-#                    print('3')
-#                    lbl = 'CORRECT'
-#                    lblRev = 'INCORRECT'
-#                print("were heere", lbl, lblRev)
-#                name = (hitid, lbl)
-#                nameRev = (hitid, lblRev)
-#                print("name: ", name)
-#                print("name namerevv",name, nameRev)
-#
-#                for idx in range(len(numCnt)):
-#                    if numCnt.iloc[idx].name == name:
-#                        cnt1 = numCnt.iloc[idx]['AnswerLabel']
-#                    if numCnt.iloc[idx].name == nameRev:
-#                        cnt2 = numCnt.iloc[idx]['AnswerLabel']
-#                rate = irate.iloc[hitid - 1]
-#
-#            else:
-#                isInCrowd = False
-#        else:
-#            isInCrowd = False
-#
-#        return isInCrowd, rate, lbl, cnt1, lblRev, cnt2, corrAns
 
+
+"The executive producer is Sheryl Lee Ralph - according to the crowd, who had an inter-rater agreement of 0.72 in this batch." \
+"The answer distribution for this specific task was 2 support votes and 1 reject vote. "
+
+crowd = Crowd()
+inCrowd, rate, lbl, cnt1, lblRev, cnt2, corrans = crowd.searchInCrowd('The Princess and the Frog', 'box office', graph,
+                                                                      WDT, WD, crowd.workTimeAndApprovalRate,
+                                                                      crowd.aggAns, crowd.numCnt, crowd.irate)
+if corrans != "":
+    answers = corrans
+answer_template = "Hi, {} of {} is {}, according to the crowd, who had an inter-rater agreement " \
+                  "of {} in this batch; the answer distribution for this task was {} support " \
+                  "votes and {} reject vote. ".format(
+    'publication date', 'Tom Meets Zizou', answers, rate, cnt1, cnt2)
+print(answer_template)

@@ -8,33 +8,12 @@ from transformers import pipeline
 
 ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
 
+
 # tokenized question
 def tokenize(question):
     tokens = nltk.word_tokenize(question)
     pos_tokens = nltk.pos_tag(tokens)
     return pos_tokens
-
-# TODO: delete this method
-def returnNouns(pos_tokens):
-    idxlist = []
-    nouns = []
-    for idx, tup in enumerate(pos_tokens):
-        if "NN" in tup[1]:
-            idxlist.append(idx)
-    for idx in idxlist:
-        nouns.append(pos_tokens[idx][0])
-    return nouns
-
-# TODO: delete this method
-def returnNounBfMovie(pos_tokens):
-    movieIdx = 0
-    for idx, tup in enumerate(pos_tokens):
-        if "movie" in tup[0].lower() or "film" in tup[0].lower():
-            movieIdx = idx
-    for idx, tup in enumerate(pos_tokens):
-        if idx == movieIdx - 1 and "NN" in tup[1]:
-            genre = pos_tokens[idx][0]
-            return genre
 
 
 def getEnt(question):
@@ -45,9 +24,9 @@ def getEnt(question):
     return entList
 
 
+# Case-insensitive search for entity
 def getEntURI(graph, entity):
     # entity label to URIs
-
     print('''
         prefix wdt: <http://www.wikidata.org/prop/direct/>
         prefix wd: <http://www.wikidata.org/entity/>
@@ -57,11 +36,20 @@ def getEntURI(graph, entity):
             ?sujU rdfs:label "{}"@en.
             }}'''.format(entity))
 
+    query_entURI_slow = '''
+        prefix wdt: <http://www.wikidata.org/prop/direct/>
+        prefix wd: <http://www.wikidata.org/entity/>
+        SELECT ?sujU
+        WHERE{{
+            ?sujU rdfs:label ?label.
+            FILTER(regex(?label, "{}"@en, "i"))
+            
+            }}
+            LIMIT 3'''.format(entity)
     query_entURI = '''
         prefix wdt: <http://www.wikidata.org/prop/direct/>
         prefix wd: <http://www.wikidata.org/entity/>
-
-        SELECT ?sujU
+        SELECT ?sujU        
         WHERE{{
             ?sujU rdfs:label "{}"@en.
             }}'''.format(entity)
@@ -113,7 +101,7 @@ def getRel(question):
         relations = verbs
     else:
         relations = theOf
-    # Hard coded relation, since it wont detect it otherwise
+    # Hard coded relation, since it won't detect it otherwise
     if "recommend" in question.lower():
         relations = ['recommend']
     if "directed" in question.lower():
@@ -152,4 +140,3 @@ def getRelURI(graph, relation, WDT):
         if WDT in str(relURI[0]):
             relURIs.append(str(relURI[0]))
     return relURIs
-

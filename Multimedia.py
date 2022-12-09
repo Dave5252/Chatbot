@@ -2,9 +2,6 @@ from Queries import humanImdbIdTemp
 
 
 class Multimedia:
-    def __init__(self):
-        pass
-
     # show picture given human name as entity
     def showPicOfHuman(self, entity, graph, images):
         # query film and get imdbid of human
@@ -16,14 +13,13 @@ class Multimedia:
             if imdbId.startswith('nm'):
                 imdbIds.append(imdbId)
         filmsList = []
-        print(imdbIds)
+        print("imdb ids",imdbIds)
         for imdbid in imdbIds:
-            films = list(filter(lambda film: film['cast'] == [imdbid], images))
-            filmsList += films
+            movies = list(filter(lambda film: film['cast'] == [imdbid], images))
+            filmsList += movies
         imgids = []
         for film in filmsList:
             imgid = film['img']
             imgids.append('image:' + imgid.strip('.jpg'))
-        print(imgids)
 
         return imgids

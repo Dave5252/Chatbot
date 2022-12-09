@@ -20,7 +20,7 @@ class Server:
         self.chat_state = defaultdict(lambda: {'messages': defaultdict(dict), 'initiated': False, 'my_alias': None})
 
     def listen(self):
-        listen_freq = 3  # seconds
+        listen_freq = 1.5  # seconds
         while True:
             # check for all chatrooms
             current_rooms = self.check_rooms(session_token=self.session_token)['rooms']
@@ -31,7 +31,7 @@ class Server:
                     if not self.chat_state[room_id]['initiated']:
                         # send a welcome message and get the alias of the agent in the chatroom
                         self.post_message(room_id=room_id, session_token=self.session_token,
-                                          message='Whats up withit, you can send me any message and check if it is echoed in {} seconds.'.format(
+                                          message='Whats up withit, after you sent me a meesage you need to be paicent for a few seconds, you know the WIFI at the UZH is not the best ;)'.format(
                                               listen_freq))
                         self.chat_state[room_id]['initiated'] = True
                         self.chat_state[room_id]['my_alias'] = room['alias']
@@ -53,10 +53,6 @@ class Server:
                                                                                             message['message'],
                                                                                             self.get_time()))
 
-                              # self.post_message(room_id=room_id, session_token=self.session_token,
-                              #                   message='Whats poppin my G, Got your messag: \'{}\' at {}.'.format(
-                              #                       message['message'],
-                              #                       self.get_time()))
                                 msgp = msgP(message["message"])
                                 response = msgp.parseMsg(graph, WDT, WD, images)
 

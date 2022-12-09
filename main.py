@@ -4,7 +4,7 @@ from LoadData import relation_emb, entity_emb, ent2id, rel2id, id2ent, ent2lbl, 
 import rdflib
 from EntityAndRealtion import *
 
-from Queries import queryLabel, query_template1, query_template2, query_template3
+from Queries import queryLabel, queryOneRelOneEnt, query_template2, query_template3
 from Recommend import *
 from Multimedia import Multimedia
 from Crowd import *
@@ -15,9 +15,6 @@ from Crowd import *
 
 class msgP:
     def __init__(self, message):
-        # can not find entities with "-", needs to  be:  "–"
-        if "-" in message:
-            message = message.replace("-", "–")
         self.message = message
         self.entURI = []
 
@@ -28,7 +25,7 @@ class msgP:
         print("parseMsg", entities, rels)
         print(self.message)
         # initiate fail answer template
-        answer_template = "Sorry, there is no answer to your question. Please try to rephrase or simplify your question."
+        answer_template = "Sorry, there is no answer to your question. Please try to rephrase or simplify your question. Keep in mind the SPARQL queries are case sensitive (Surname Name) aswell as (Movies)."
 
         # check if there image for the entity
         noPic = 'picture' not in self.message.lower()
@@ -45,41 +42,47 @@ class msgP:
             entity = entities[0]
             relation = rels[0]
             crowd = Crowd()
-            inCrowd, rate, lbl, cnt1, lblRev, cnt2 = crowd.checkCrowdER(entity, relation, graph, WDT, WD,
-                                                                        crowd.cleanData, Crowd.aggAns, crowd.numCnt,
-                                                                        crowd.irate)
-            print('crowd')
+            inCrowd, rate, lbl, cnt1, lblRev, cnt2, corrans = crowd.searchInCrowd(entity, relation, graph, WDT, WD,
+                                                                         crowd.workTimeAndApprovalRate, Crowd.aggAns, crowd.numCnt,
+                                                                         crowd.irate)
             print('crowd, rate, lbl,cnt1,lblRev,cnt2: ', inCrowd, rate, lbl, cnt1, lblRev, cnt2)
             relid = getRelWDTid(graph, WDT, relation)
-            res = []
+            result = []
             # query with relid and entity label
+            print("relid", relid)
             if len(relid) == 1:
-                query_template = query_template1.format(entity, relid[0])
-                res = set(graph.query(query_template))
-                print(res, len(res))
+                query_template = queryOneRelOneEnt.format(entity, relid[0])
+                print("query_template", query_template)
+                result = set(graph.query(query_template))
+                print("Query result",result, len(result))
                 answers = []
-                for row in res:
-                    ##if result is URI then query label
-                    if isinstance(row[0], rdflib.term.URIRef):
-                        qid = getEntIdByURI(WD, row[0])
+                for res in result:
+                    # if result is URI then query label
+                    if isinstance(res[0], rdflib.term.URIRef):
+                        qid = getEntIdByURI(WD, res[0])
                         entLbls = set(graph.query(queryLabel.format(qid)))
                         print("entLbls",entLbls, len(entLbls))
                         for entlbl in entLbls:
                             answers.append(str(entlbl.label))
                     # if result is not URI, meaning getting number and output directly
                     else:
-                        answers.append(str(row.objU))
+                        print("take number out, res.objU", res.objU)
+                        answers.append(str(res.objU))
                     answer_template = "Hi, the {} of {} is {}".format(relation, entity, answers[0])
                     if len(answers) > 1:
                         # more than one answer --> use embedding. Not the nicest way to do it
-                        res = []
-                if inCrowd and answers != []:
+                        result = []
+                if inCrowd:
+                    if corrans != "":
+                        answers = corrans
+                    if type(answers) == list:
+                        answers = answers[0]
                     answer_template = "Hi, {} of {} is {}, according to the crowd, who had an inter-rater agreement " \
                                       "of {} in this batch; the answer distribution for this task was {} support " \
                                       "votes and {} reject vote. ".format(
-                        relation, entity, answers[0], rate, cnt1, cnt2)
+                        relation, entity, answers, rate, cnt1, cnt2)
 
-            if len(res) == 0 and inCrowd == False:
+            if len(result) == 0 and inCrowd == False:
                 # Check if embedding question
                 try:
                     embedAnds = self.checkEmbed(graph, WD, WDT, entity, relation)
@@ -90,47 +93,12 @@ class msgP:
                             answer_template = "Hi, the {} of {} is {}. ".format(relation, entity, element)
                             counter += 1
                         elif counter < 4:
-                            answer_template += "Another answer is {}. ".format(element)
+                            answer_template += "I also fount the following answer: {}. ".format(element)
                             counter += 1
                     # answer_template = f"Here is the answer to your question: {embedAnds[0]}"
                     print("PREFAAIL:", answer_template)
                 except:
-                    answer_template = "Sorry, there is no answer to your question. Please try to rephrase or simplify your question."
-
-
-        # if two entities
-        # TODO deleete
-        if len(entities) == 2 and notPicture and 'recommend' not in rels:
-            print("case2")
-            print(entities[1])
-            query1 = query_template2.format(entities[0], entities[1])
-            query2 = query_template3.format(entities[0], entities[1])
-            query3 = query_template2.format(entities[1], entities[0])
-            query4 = query_template3.format(entities[1], entities[0])
-            res1 = set(graph.query(query1))
-            res2 = set(graph.query(query2))
-            res3 = set(graph.query(query3))
-            res4 = set(graph.query(query4))
-            res = set.union(res1, res2, res3, res4)
-            print(res, len(res))
-            # inCrowd, rate, lbl, cnt1, lblRev, cnt2 = checkCrowdER(entities[1], entities[0], graph, WDT, WD,
-            #                                                      crowd.cleanCrowd, crowd.aggAns, crowd.numCnt,
-            #                                                      crowd.irate)
-
-            if len(res) == 0:
-                answer_template = "Sorry, there is no answer to your question. Please try to rephrase or simplify your question."
-                print(answer_template)
-            else:
-                # parse res set into list of strings
-                answers = []
-                for row in res:
-                    answers.append(str(row.relL))
-                #   if inCrowd:
-                #       answer_template = "Hi, {} of {} is {}, according to the crowd, who had an inter-rater agreement of {} in this batch; the answer distribution for this task was {} support votes and {} reject vote. ".format(
-                #           relation, entity, answers, rate, cnt1, cnt2)
-                #   else:
-                answer_template = "Hi, {} of {} is {}".format(relation, entity, answers)
-                print(answer_template)
+                    answer_template = "Sorry, there is no answer to your question. Please try to rephrase or simplify your question. Keep in mind the SPARQL queries are case sensitive (Surname Name) oaswell as (Movies)."
 
         # recommendation
         if 'recommend' in rels:
@@ -138,9 +106,16 @@ class msgP:
                                 'I recommend: {}, {}, or {}.']
             rcmds = recommend(entities)
             rcmds = [rcmd for rcmd in rcmds if rcmd not in entities]
-            answer_template = answer_templates[random.randint(0, len(answer_templates) - 1)].format(
-                rcmds.pop(random.randint(0, len(rcmds) - 1)), rcmds.pop(random.randint(0, len(rcmds) - 1)),
-                rcmds.pop(random.randint(0, len(rcmds) - 1)))
+            if len(rcmds) >= 3:
+                answer_template = answer_templates[random.randint(0, len(answer_templates) - 1)].format(
+                    rcmds.pop(random.randint(0, len(rcmds) - 1)), rcmds.pop(random.randint(0, len(rcmds) - 1)),
+                    rcmds.pop(random.randint(0, len(rcmds) - 1)))
+            elif len(rcmds) == 2:
+                answer_template = "Here are some recommendations for you: {} or {}".format(rcmds[0], rcmds[1])
+            elif len(rcmds) == 1:
+                answer_template = "Here is a recommendation: {}".format(rcmds[0])
+            else:
+                answer_template = "Sorry, there is no recommendation for you."
             print(answer_template)
 
         # Image Question
@@ -176,6 +151,7 @@ class msgP:
             columns=('Entity', 'Label', 'Score', 'Rank'))
         print("EMBEDDINGS WORKED MY DUDE")
         return list(ans['Label'])
+
     # parse the message and get entity
     def parseEnt(self, graph):
         # classify the message
@@ -191,7 +167,23 @@ class msgP:
                 entList.append(entity)
             # if not, then query typo
             else:
-                print('entURI does not exist')
+                # can not find entities with "-", needs to  be:  "–"
+                if "-" in self.message:
+                    entity = entity.replace("-", "–")
+                    self.entURI = getEntURI(graph, entity)
+                    # if exist, then append entity label
+                    if len(self.entURI) != 0:
+                        print('entURI exist')
+                        entList.append(entity)
+                elif "–" in self.message:
+                    entity = entity("–", "-")
+                    entity = entity.replace(graph, entity)
+                    # if exist, then append entity label
+                    if len(self.entURI) != 0:
+                        print('entURI exist')
+                        entList.append(entity)
+                else:
+                    print('entURI does not exist')
         print(entList)
         return entList
 

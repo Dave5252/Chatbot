@@ -9,7 +9,7 @@ queryLabel = '''
         }}'''
 
 # query one entity and one relation, find the other entity qid
-query_template1 = '''
+queryOneRelOneEnt = '''
     prefix wdt: <http://www.wikidata.org/prop/direct/>
     prefix wd: <http://www.wikidata.org/entity/>
 
