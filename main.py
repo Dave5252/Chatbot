@@ -20,7 +20,7 @@ class msgP:
 
     # parse the message and get the response
     def parseMsg(self, graph, WDT, WD, images):
-        entities = self.parseEnt(graph)
+        entities = self.parseEnt(graph, WD)
         rels = self.parseRel(entities, graph, WDT)
         print("parseMsg", entities, rels)
         print(self.message)
@@ -93,7 +93,7 @@ class msgP:
                             answer_template = "Hi, the {} of {} is {}. ".format(relation, entity, element)
                             counter += 1
                         elif counter < 4:
-                            answer_template += "I also fount the following answer: {}. ".format(element)
+                            answer_template += "I also found the following answer: {}. ".format(element)
                             counter += 1
                     # answer_template = f"Here is the answer to your question: {embedAnds[0]}"
                     print("PREFAAIL:", answer_template)
@@ -129,6 +129,30 @@ class msgP:
                     print("imgageids ", imgageids)
                     if len(imgageids) > 0:
                         answer_template = imgageids[0]
+        if len(entities) >=1 and len(rels) >= 1 and answer_template == "Sorry, there is no answer to your question. Please try to rephrase or simplify your question. Keep in mind the SPARQL queries are case sensitive (Surname Name) aswell as (Movies).":
+            print("More than one entity and more than one relation")
+            [entities.remove(entity) for entity in entities if entity in rels]
+            for entity in entities:
+                print("first try & entities", entities)
+                try:
+                    print("entity", entity)
+                    print("rels", rels)
+                    embedAnds = self.checkEmbed(graph, WD, WDT, entity, rels[0])
+                    # return the first answer
+                    print("embedAnds of fix", embedAnds)
+                    counter = 0
+                    for element in embedAnds:
+                        if counter == 0:
+                            answer_template = "Hi, the {} of {} is {}. ".format(rels, entity, element)
+                            counter += 1
+                        elif counter < 4:
+                            answer_template += "I also found the following answer: {}. ".format(element)
+                            counter += 1
+                    # answer_template = f"Here is the answer to your question: {embedAnds[0]}"
+                    print("PREFAAIL:", answer_template)
+                except:
+                    answer_template = "Sorry, there is no answer to your question. Please try to rephrase or simplify your question. Keep in mind the SPARQL queries are case sensitive (Surname Name) oaswell as (Movies)."
+
         return answer_template
 
     # Function to extract relation (Embeddings for the DDIS Movie Graph)
@@ -153,7 +177,13 @@ class msgP:
         return list(ans['Label'])
 
     # parse the message and get entity
-    def parseEnt(self, graph):
+    def parseEnt(self, graph, WD):
+        """
+        Parse the message and get entity
+        :param graph: graph
+        :param WD: wikidata
+        :return: entity list
+        """
         # classify the message
         entitylist = getEnt(self.message)
         entList = []
@@ -161,10 +191,10 @@ class msgP:
         for entity in entitylist:
             # check if URI exist
             self.entURI = getEntURI(graph, entity)
-            # if exist, then append entity label
+            # if entity exist, then append entity label
             if len(self.entURI) != 0:
-                print('entURI exist')
-                entList.append(entity)
+                print('entURI exist', self.entURI)
+                [entList.append(str(ent.label)) for ent in set(graph.query(queryLabel.format(getEntIdByURI(WD, self.entURI[0]))))]
             # if not, then query typo
             else:
                 # can not find entities with "-", needs to  be:  "–"
@@ -174,14 +204,14 @@ class msgP:
                     # if exist, then append entity label
                     if len(self.entURI) != 0:
                         print('entURI exist')
-                        entList.append(entity)
+                        [entList.append(str(ent.label)) for ent in set(graph.query(queryLabel.format(getEntIdByURI(WD, self.entURI[0]))))]
                 elif "–" in self.message:
-                    entity = entity("–", "-")
-                    entity = entity.replace(graph, entity)
+                    entity = entity.replace("–", "-")
+                    self.entURI = getEntURI(graph, entity)
                     # if exist, then append entity label
                     if len(self.entURI) != 0:
                         print('entURI exist')
-                        entList.append(entity)
+                        [entList.append(str(ent.label)) for ent in set(graph.query(queryLabel.format(getEntIdByURI(WD, self.entURI[0]))))]
                 else:
                     print('entURI does not exist')
         print(entList)

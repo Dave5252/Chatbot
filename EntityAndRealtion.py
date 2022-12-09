@@ -43,7 +43,6 @@ def getEntURI(graph, entity):
         WHERE{{
             ?sujU rdfs:label ?label.
             FILTER(regex(?label, "{}"@en, "i"))
-            
             }}
             LIMIT 3'''.format(entity)
     query_entURI = '''
@@ -58,6 +57,12 @@ def getEntURI(graph, entity):
     for entURI in entURIList:
         entURIs.append(str(entURI[0]))
     print("entURI: ", entURIs)
+    if len(entURIs) == 0:
+        entURIList = list(graph.query(query_entURI_slow))
+        entURIs = []
+        for entURI in entURIList:
+            entURIs.append(str(entURI[0]))
+        print("entURI with slow: ", entURIs)
     return entURIs
 
 
