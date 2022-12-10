@@ -52,10 +52,13 @@ class Server:
                                     '\t- Chatroom {} - new message #{}: \'{}\' - {}'.format(room_id, message['ordinal'],
                                                                                             message['message'],
                                                                                             self.get_time()))
-
+                                start = time.time()
                                 msgp = msgP(message["message"])
                                 response = msgp.parseMsg(graph, WDT, WD, images)
-
+                                end = time.time()
+                                if end - start > 5:
+                                    excuse = "Sorry, I am a bit slow, I am still learning:) \n"
+                                    response = excuse + response
                                 self.post_message(room_id=room_id, session_token=self.session_token,
                                                   message=response)
             time.sleep(listen_freq)

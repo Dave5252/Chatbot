@@ -17,9 +17,18 @@ class msgP:
     def __init__(self, message):
         self.message = message
         self.entURI = []
+        self.recommendQuestions = ["I also found the following answer: {}. ","This might also be an answer: {}. ","I also found this answer: {}. ", "Another answer i found: {}. ", "I also found this: {}. "]
 
     # parse the message and get the response
     def parseMsg(self, graph, WDT, WD, images):
+        """
+        Parse the message and get the response
+        :param graph: The graph
+        :param WDT: wikidata property
+        :param WD:  wikidata entities
+        :param images: images
+        :return: The response message
+        """
         entities = self.parseEnt(graph, WD)
         rels = self.parseRel(entities, graph, WDT)
         print("parseMsg", entities, rels)
@@ -79,11 +88,12 @@ class msgP:
                         answers = answers[0]
                     answer_template = "Hi, {} of {} is {}, according to the crowd, who had an inter-rater agreement " \
                                       "of {} in this batch; the answer distribution for this task was {} support " \
-                                      "votes and {} reject vote. ".format(
+                                      "votes and {} reject vote (If there are more reject voted than support votes, the answer comes from the crowd).".format(
                         relation, entity, answers, rate, cnt1, cnt2)
 
             if len(result) == 0 and inCrowd == False:
                 # Check if embedding question
+                recans = self.recommendQuestions
                 try:
                     embedAnds = self.checkEmbed(graph, WD, WDT, entity, relation)
                     # return the first answer
@@ -93,7 +103,9 @@ class msgP:
                             answer_template = "Hi, the {} of {} is {}. ".format(relation, entity, element)
                             counter += 1
                         elif counter < 4:
-                            answer_template += "I also found the following answer: {}. ".format(element)
+                            toappend = recans[random.randint(0,len(recans))-1]
+                            answer_template += toappend.format(element)
+                            recans.remove(toappend)
                             counter += 1
                     # answer_template = f"Here is the answer to your question: {embedAnds[0]}"
                     print("PREFAAIL:", answer_template)
@@ -102,7 +114,8 @@ class msgP:
 
         # recommendation
         if 'recommend' in rels:
-            answer_templates = ['Here are the recommendations: {}, {}, or {}.', 'You may like: {}, {}, or {}.',
+            answer_templates = ['Here are some recommendations for you: {}, {}, or {}.', 'You may like the following: '
+                                                                                         '{}, {}, or {}.',
                                 'I recommend: {}, {}, or {}.']
             rcmds = recommend(entities)
             rcmds = [rcmd for rcmd in rcmds if rcmd not in entities]
@@ -111,9 +124,9 @@ class msgP:
                     rcmds.pop(random.randint(0, len(rcmds) - 1)), rcmds.pop(random.randint(0, len(rcmds) - 1)),
                     rcmds.pop(random.randint(0, len(rcmds) - 1)))
             elif len(rcmds) == 2:
-                answer_template = "Here are some recommendations for you: {} or {}".format(rcmds[0], rcmds[1])
+                answer_template = "Here are two recommendations you might like: {} or {}".format(rcmds[0], rcmds[1])
             elif len(rcmds) == 1:
-                answer_template = "Here is a recommendation: {}".format(rcmds[0])
+                answer_template = "Here is something i would recommend: {}".format(rcmds[0])
             else:
                 answer_template = "Sorry, there is no recommendation for you."
             print(answer_template)
@@ -122,36 +135,61 @@ class msgP:
         if not notPicture:
             mutli_m = Multimedia()
             print("Show Pictures")
-            if not noPic or not noImage or not noPhoto or not noLookLike or not noLooksLike:
-                if len(entities) != 0:
-                    entity = entities[0]
-                    imgageids = mutli_m.showPicOfHuman(entity, graph, images)
-                    print("imgageids ", imgageids)
-                    if len(imgageids) > 0:
-                        answer_template = imgageids[0]
+            if len(entities) != 0:
+                entity = entities[0]
+                imgageids = mutli_m.showPicOfHuman(entity, graph, images)
+                print("imgageids ", imgageids)
+                if len(imgageids) > 0:
+                    answer_template = imgageids[0]
+
+        # if nothing was found so fas, try to find the answer in the embedding & crowd
         if len(entities) >=1 and len(rels) >= 1 and answer_template == "Sorry, there is no answer to your question. Please try to rephrase or simplify your question. Keep in mind the SPARQL queries are case sensitive (Surname Name) aswell as (Movies).":
+            inCrowd = False
             print("More than one entity and more than one relation")
             [entities.remove(entity) for entity in entities if entity in rels]
             for entity in entities:
-                print("first try & entities", entities)
-                try:
-                    print("entity", entity)
-                    print("rels", rels)
-                    embedAnds = self.checkEmbed(graph, WD, WDT, entity, rels[0])
-                    # return the first answer
-                    print("embedAnds of fix", embedAnds)
-                    counter = 0
-                    for element in embedAnds:
-                        if counter == 0:
-                            answer_template = "Hi, the {} of {} is {}. ".format(rels, entity, element)
-                            counter += 1
-                        elif counter < 4:
-                            answer_template += "I also found the following answer: {}. ".format(element)
-                            counter += 1
-                    # answer_template = f"Here is the answer to your question: {embedAnds[0]}"
-                    print("PREFAAIL:", answer_template)
-                except:
-                    answer_template = "Sorry, there is no answer to your question. Please try to rephrase or simplify your question. Keep in mind the SPARQL queries are case sensitive (Surname Name) oaswell as (Movies)."
+                for relation in rels:
+                    print("first try & entities & rels", entity, relation)
+                    crowd = Crowd()
+                    inCrowd, rate, lbl, cnt1, lblRev, cnt2, corrans = crowd.searchInCrowd(entity, relation, graph, WDT, WD,
+                                                                                          crowd.workTimeAndApprovalRate,
+                                                                                          Crowd.aggAns, crowd.numCnt,
+                                                                                          crowd.irate)
+                    print('crowd, rate, lbl,cnt1,lblRev,cnt2: ', inCrowd, rate, lbl, cnt1, lblRev, cnt2, corrans)
+                    if inCrowd:
+                        if corrans != "":
+                            answers = corrans
+                        else:# is in crowd but ent was not found TODO: FIX
+                            answers = "Crowd failed"
+                        if type(answers) == list:
+                            answers = answers[0]
+
+                        answer_template = "Hi, {} of {} is {}, according to the crowd, who had an inter-rater agreement " \
+                                          "of {} in this batch; the answer distribution for this task was {} support " \
+                                          "votes and {} reject vote (If there are more reject voted than support votes, the answer comes from the crowd).".format(
+                            relation, entity, answers, rate, cnt1, cnt2)
+                if not inCrowd:
+                    try:
+                        print("entity", entity)
+                        print("rels", rels)
+                        embedAnds = self.checkEmbed(graph, WD, WDT, entity, rels[0])
+                        # return the first answer
+                        print("embedAnds of fix", embedAnds)
+                        counter = 0
+                        recans = self.recommendQuestions
+                        for element in embedAnds:
+                            if counter == 0:
+                                answer_template = "Hi, the {} of {} is {}. ".format(rels[0], entity, element)
+                                counter += 1
+                            elif counter < 4:
+                                toappend = recans[random.randint(0,len(recans))-1]
+                                answer_template += toappend.format(element)
+                                recans.remove(toappend)
+                                counter += 1
+                        # answer_template = f"Here is the answer to your question: {embedAnds[0]}"
+                        print("PREFAAIL:", answer_template)
+                    except:
+                        answer_template = "Sorry, there is no answer to your question. Please try to rephrase or simplify your question. Keep in mind the SPARQL queries are case sensitive (Surname Name) oaswell as (Movies)."
 
         return answer_template
 
@@ -194,8 +232,8 @@ class msgP:
             # if entity exist, then append entity label
             if len(self.entURI) != 0:
                 print('entURI exist', self.entURI)
-                [entList.append(str(ent.label)) for ent in set(graph.query(queryLabel.format(getEntIdByURI(WD, self.entURI[0]))))]
-            # if not, then query typo
+                for ent in self.entURI:
+                    [entList.append(str(ent.label)) for ent in set(graph.query(queryLabel.format(getEntIdByURI(WD, ent))))]
             else:
                 # can not find entities with "-", needs to  be:  "–"
                 if "-" in self.message:
@@ -204,14 +242,18 @@ class msgP:
                     # if exist, then append entity label
                     if len(self.entURI) != 0:
                         print('entURI exist')
-                        [entList.append(str(ent.label)) for ent in set(graph.query(queryLabel.format(getEntIdByURI(WD, self.entURI[0]))))]
+                        for ent in self.entURI:
+                            [entList.append(str(ent.label)) for ent in
+                             set(graph.query(queryLabel.format(getEntIdByURI(WD, ent))))]
                 elif "–" in self.message:
                     entity = entity.replace("–", "-")
                     self.entURI = getEntURI(graph, entity)
                     # if exist, then append entity label
                     if len(self.entURI) != 0:
                         print('entURI exist')
-                        [entList.append(str(ent.label)) for ent in set(graph.query(queryLabel.format(getEntIdByURI(WD, self.entURI[0]))))]
+                        for ent in self.entURI:
+                            [entList.append(str(ent.label)) for ent in
+                             set(graph.query(queryLabel.format(getEntIdByURI(WD, ent))))]
                 else:
                     print('entURI does not exist')
         print(entList)
