@@ -107,5 +107,15 @@ class Crowd:
                         corrans = corrans[0]
         if type(corrans) == str:
             if corrans.startswith("wdt") or corrans.startswith("P"):
-                corrans = "tada"  # TODO
+                corrans = corrans.replace("wdt:", "")
+                entlist = set(graph.query("""
+                prefix wdt: <http://www.wikidata.org/prop/direct/>
+                prefix wd: <http://www.wikidata.org/entity/>
+                SELECT DISTINCT * WHERE {{
+                wd:{} rdfs:label ?label . 
+                FILTER (langMatches( lang(?label), "en" ) )  
+                }}""".format(corrans)))
+                corrans = [str(ent.label) for ent in entlist]
+        if len(corrans) > 0 and type(corrans) == list:
+            corrans = corrans[0]
         return isInCrowd, p_i, lbl, corr, lblRev, incorr, corrans

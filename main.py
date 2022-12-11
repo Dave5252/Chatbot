@@ -233,7 +233,10 @@ class msgP:
             if len(self.entURI) != 0:
                 print('entURI exist', self.entURI)
                 for ent in self.entURI:
-                    [entList.append(str(ent.label)) for ent in set(graph.query(queryLabel.format(getEntIdByURI(WD, ent))))]
+                    try:
+                        [entList.append(str(ent.label)) for ent in set(graph.query(queryLabel.format(getEntIdByURI(WD, ent))))]
+                    except:
+                        print("No label found")
             else:
                 # can not find entities with "-", needs to  be:  "–"
                 if "-" in self.message:
