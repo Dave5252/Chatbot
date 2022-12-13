@@ -57,6 +57,8 @@ class Server:
                                 response = msgp.parseMsg(graph, WDT, WD, images)
                                 end = time.time()
                                 if end - start > 5:
+                                    # send excuse message if the response takes too long
+                                    response = response.replace("Hi, t", "T")
                                     excuse = "Sorry, I am a bit slow, I am still learning:) \n"
                                     response = excuse + response
                                 self.post_message(room_id=room_id, session_token=self.session_token,

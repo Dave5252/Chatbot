@@ -9,14 +9,23 @@ from transformers import pipeline
 ner = pipeline('ner', model=model, tokenizer=tokenizer, aggregation_strategy="simple")
 
 
-# tokenized question
 def tokenize(question):
+    """
+    Tokenize the question
+    :param question: raw question from the user
+    :return: tokenized question in a list
+    """
     tokens = nltk.word_tokenize(question)
     pos_tokens = nltk.pos_tag(tokens)
     return pos_tokens
 
 
 def getEnt(question):
+    """
+    Get the entity from the question
+    :param question: tokenized question
+    :return: Entity list
+    """
     entities = ner(question, aggregation_strategy="simple")
     entList = []
     for ent in entities:
@@ -24,8 +33,13 @@ def getEnt(question):
     return entList
 
 
-# Case-insensitive search for entity
 def getEntURI(graph, entity):
+    """
+    Get the entity URI from the entity label
+    :param graph: graph
+    :param entity: An entity label
+    :return: the entity URI
+    """
     # entity label to URIs
     print('''
         prefix wdt: <http://www.wikidata.org/prop/direct/>
@@ -35,7 +49,7 @@ def getEntURI(graph, entity):
         WHERE{{
             ?sujU rdfs:label "{}"@en.
             }}'''.format(entity))
-
+    # entity label to URIs with the filter
     query_entURI_slow = '''
         prefix wdt: <http://www.wikidata.org/prop/direct/>
         prefix wd: <http://www.wikidata.org/entity/>
@@ -68,6 +82,12 @@ def getEntURI(graph, entity):
 
 # helper function to get the ID of the entity
 def getEntIdByURI(WD, entURI):
+    """
+    Get the entity ID from the entity URI
+    :param WD: the Wikidata prefix
+    :param entURI: the entity URI
+    :return: the entity ID
+    """
     entId = []
     if WD in entURI:
         wdIdPattern = "{}(.*)".format(WD)
@@ -76,6 +96,11 @@ def getEntIdByURI(WD, entURI):
 
 
 def returnVerbs(pos_tokens):
+    """
+    Get the verbs from the tokenized question
+    :param pos_tokens: Tokenized question
+    :return: return the verbs
+    """
     idxlist = []
     verbTokens = []
     for idx, tup in enumerate(pos_tokens):
@@ -89,6 +114,11 @@ def returnVerbs(pos_tokens):
 
 
 def theOfTokens(question):
+    """
+    Get the tokens between "the (.*) of" in the question
+    :param question: the question
+    :return: the tokens between "the (.*) of"
+    """
     matching = re.search("the (.*) of", question)
     if not matching:
         return False
@@ -97,8 +127,13 @@ def theOfTokens(question):
         return [relation]
 
 
-# Get relation relation
 def getRel(question):
+    """
+    Get the relation from the question
+    :param question: the question
+    :return: The relation
+    """
+    # check if the question has the "the (.*) of" pattern
     theOf = theOfTokens(question)
     if not theOf:
         pos_tokens = tokenize(question)
@@ -116,8 +151,14 @@ def getRel(question):
     return relations
 
 
-# get relation pid by relation labels
 def getRelWDTid(graph, WDT, relations):
+    """
+    Get the relation ID from the relation URI
+    :param graph: the graph
+    :param WDT: the Wikidata prefix
+    :param relations: the relation
+    :return: the relation IDs
+    """
     relURIList = getRelURI(graph, relations, WDT)
     relIds = []
     for row in relURIList:
@@ -130,6 +171,13 @@ def getRelWDTid(graph, WDT, relations):
 
 
 def getRelURI(graph, relation, WDT):
+    """
+    Get the relation URI from the relation label
+    :param graph:  the graph
+    :param relation: the relation label
+    :param WDT: the Wikidata prefix
+    :return: the relation URI
+    """
     # get Rel URI
     query_relURI = '''
            prefix wdt: <http://www.wikidata.org/prop/direct/>

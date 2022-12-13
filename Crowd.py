@@ -14,18 +14,22 @@ class Crowd:
     workTimeAndApprovalRate = workTimeAndApprovalRate.loc[workTimeAndApprovalRate['WorkTimeInSeconds'] >= 10]
     # Filter out malicious workers by their LifetimeApprovalRate
     workTimeAndApprovalRate = workTimeAndApprovalRate.loc[workTimeAndApprovalRate['LifetimeApprovalRate'] >= 50]
-    aggAns = workTimeAndApprovalRate.groupby('HITId')['AnswerLabel'].agg(pd.Series.mode).to_frame()
     # count number of pros and cons and compute inter-rater rate
-    zdf = workTimeAndApprovalRate.filter(['HITId', 'AnswerLabel'])
-    numCnt = zdf.groupby('HITId')['AnswerLabel'].value_counts().to_frame()
-    counts = zdf.groupby('HITId')['AnswerLabel'].value_counts('counts').to_frame()
-    irate = counts.groupby('HITId')['AnswerLabel'].max()
-
-    def searchInCrowd(self, entity, relation, graph, WDT, WD, cleanedCrowdDataSet, aggAns, numCnt, irate):
+    def searchInCrowd(self, entity, relation, graph, WDT, WD, cleanedCrowdDataSet):
+        """
+        Search in crowdsource data for the given entity and relation
+        :param entity: entity from the question
+        :param relation: relation from the question
+        :param graph: graph
+        :param WDT: wikidata prefix
+        :param WD: wikidata prefix
+        :param cleanedCrowdDataSet: cleaned crowdsource data with  approvalrate > 40 and worktime > 10.
+        :return: Return the number of pros and cons, the correct answer, and the inter-rater rate, if the entity and
+        relation are in the crowdsource data.
+        """
         isInCrowd = False
         relid = getRelWDTid(graph, WDT, relation)
         entURI = getEntURI(graph, entity)
-        rate = 0
         lbl = 0
         lblRev = 0
         incorr = 0
@@ -33,7 +37,6 @@ class Crowd:
         corrans = {}
         p_i = 0
         frominput3 = False
-        kappa_values = {}
         # check if entity and relation exist in crowd data
         for ent in entURI:
             entid = getEntIdByURI(WD, ent)
@@ -78,7 +81,6 @@ class Crowd:
                         incorrInBatch = cleanedCrowdDataSet[
                             (cleanedCrowdDataSet.HITTypeId == batch) & (
                                     cleanedCrowdDataSet.AnswerLabel == 'INCORRECT')].shape[0]
-
                     n_answer = corrInBatch + incorrInBatch
                     p_i = 1 / (n_answer * (n_answer - 1)) * (
                                 corrInBatch * (corr - 1) + incorrInBatch * (incorrInBatch - 1))

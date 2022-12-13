@@ -1,10 +1,8 @@
 import random
 
-from LoadData import relation_emb, entity_emb, ent2id, rel2id, id2ent, ent2lbl, lbl2ent
+from LoadData import relation_emb, rel2id
 import rdflib
-from EntityAndRealtion import *
-
-from Queries import queryLabel, queryOneRelOneEnt, query_template2, query_template3
+from Queries import queryLabel, queryOneRelOneEnt
 from Recommend import *
 from Multimedia import Multimedia
 from Crowd import *
@@ -17,7 +15,9 @@ class msgP:
     def __init__(self, message):
         self.message = message
         self.entURI = []
-        self.recommendQuestions = ["I also found the following answer: {}. ","This might also be an answer: {}. ","I also found this answer: {}. ", "Another answer i found: {}. ", "I also found this: {}. "]
+        self.recommendQuestions = ["I also found the following answer: {}. ", "This might also be an answer: {}. ",
+                                   "I also found this answer: {}. ", "Another answer i found: {}. ",
+                                   "I also found this: {}. "]
 
     # parse the message and get the response
     def parseMsg(self, graph, WDT, WD, images):
@@ -34,7 +34,8 @@ class msgP:
         print("parseMsg", entities, rels)
         print(self.message)
         # initiate fail answer template
-        answer_template = "Sorry, there is no answer to your question. Please try to rephrase or simplify your question. Keep in mind the SPARQL queries are case sensitive (Surname Name) aswell as (Movies)."
+        answer_template = "Sorry, there is no answer to your question. Please try to rephrase or simplify your " \
+                          "question."
 
         # check if there image for the entity
         noPic = 'picture' not in self.message.lower()
@@ -52,8 +53,7 @@ class msgP:
             relation = rels[0]
             crowd = Crowd()
             inCrowd, rate, lbl, cnt1, lblRev, cnt2, corrans = crowd.searchInCrowd(entity, relation, graph, WDT, WD,
-                                                                         crowd.workTimeAndApprovalRate, Crowd.aggAns, crowd.numCnt,
-                                                                         crowd.irate)
+                                                                                  crowd.workTimeAndApprovalRate)
             print('crowd, rate, lbl,cnt1,lblRev,cnt2: ', inCrowd, rate, lbl, cnt1, lblRev, cnt2)
             relid = getRelWDTid(graph, WDT, relation)
             result = []
@@ -63,14 +63,14 @@ class msgP:
                 query_template = queryOneRelOneEnt.format(entity, relid[0])
                 print("query_template", query_template)
                 result = set(graph.query(query_template))
-                print("Query result",result, len(result))
+                print("Query result", result, len(result))
                 answers = []
                 for res in result:
                     # if result is URI then query label
                     if isinstance(res[0], rdflib.term.URIRef):
                         qid = getEntIdByURI(WD, res[0])
                         entLbls = set(graph.query(queryLabel.format(qid)))
-                        print("entLbls",entLbls, len(entLbls))
+                        print("entLbls", entLbls, len(entLbls))
                         for entlbl in entLbls:
                             answers.append(str(entlbl.label))
                     # if result is not URI, meaning getting number and output directly
@@ -88,7 +88,8 @@ class msgP:
                         answers = answers[0]
                     answer_template = "Hi, {} of {} is {}, according to the crowd, who had an inter-rater agreement " \
                                       "of {} in this batch; the answer distribution for this task was {} support " \
-                                      "votes and {} reject vote (If there are more reject voted than support votes, the answer comes from the crowd).".format(
+                                      "votes and {} reject vote (If there are more reject voted than support votes, " \
+                                      "the answer comes from the crowd).".format(
                         relation, entity, answers, rate, cnt1, cnt2)
 
             if len(result) == 0 and inCrowd == False:
@@ -103,20 +104,22 @@ class msgP:
                             answer_template = "Hi, the {} of {} is {}. ".format(relation, entity, element)
                             counter += 1
                         elif counter < 4:
-                            toappend = recans[random.randint(0,len(recans))-1]
+                            toappend = recans[random.randint(0, len(recans)) - 1]
                             answer_template += toappend.format(element)
                             recans.remove(toappend)
                             counter += 1
                     # answer_template = f"Here is the answer to your question: {embedAnds[0]}"
                     print("PREFAAIL:", answer_template)
                 except:
-                    answer_template = "Sorry, there is no answer to your question. Please try to rephrase or simplify your question. Keep in mind the SPARQL queries are case sensitive (Surname Name) oaswell as (Movies)."
+                    answer_template = "Sorry, there is no answer to your question. Please try to rephrase or simplify " \
+                                      "your question. Keep in mind the SPARQL queries are case sensitive (Surname " \
+                                      "Name) oaswell as (Movies). "
 
         # recommendation
-        if 'recommend' in rels:
-            answer_templates = ['Here are some recommendations for you: {}, {}, or {}.', 'You may like the following: '
+        if 'recommend' in rels and len(entities) > 0:
+            answer_templates = ['Here are some recommendations for you: {}, {}, or {}.', 'You may like the following recommendations: '
                                                                                          '{}, {}, or {}.',
-                                'I recommend: {}, {}, or {}.']
+                                'I would recommend: {}, {}, or {}.']
             rcmds = recommend(entities)
             rcmds = [rcmd for rcmd in rcmds if rcmd not in entities]
             if len(rcmds) >= 3:
@@ -132,7 +135,7 @@ class msgP:
             print(answer_template)
 
         # Image Question
-        if not notPicture:
+        if not notPicture and len(entities) > 0:
             mutli_m = Multimedia()
             print("Show Pictures")
             if len(entities) != 0:
@@ -143,7 +146,9 @@ class msgP:
                     answer_template = imgageids[0]
 
         # if nothing was found so fas, try to find the answer in the embedding & crowd
-        if len(entities) >=1 and len(rels) >= 1 and answer_template == "Sorry, there is no answer to your question. Please try to rephrase or simplify your question. Keep in mind the SPARQL queries are case sensitive (Surname Name) aswell as (Movies).":
+        if len(entities) >= 1 and len(
+                rels) >= 1 and answer_template == "Sorry, there is no answer to your question. Please try to rephrase " \
+                                                  "or simplify your question.":
             inCrowd = False
             print("More than one entity and more than one relation")
             [entities.remove(entity) for entity in entities if entity in rels]
@@ -151,22 +156,24 @@ class msgP:
                 for relation in rels:
                     print("first try & entities & rels", entity, relation)
                     crowd = Crowd()
-                    inCrowd, rate, lbl, cnt1, lblRev, cnt2, corrans = crowd.searchInCrowd(entity, relation, graph, WDT, WD,
-                                                                                          crowd.workTimeAndApprovalRate,
-                                                                                          Crowd.aggAns, crowd.numCnt,
-                                                                                          crowd.irate)
+                    inCrowd, rate, lbl, cnt1, lblRev, cnt2, corrans = crowd.searchInCrowd(entity, relation, graph, WDT,
+                                                                                          WD,
+                                                                                          crowd.workTimeAndApprovalRate)
+
                     print('crowd, rate, lbl,cnt1,lblRev,cnt2: ', inCrowd, rate, lbl, cnt1, lblRev, cnt2, corrans)
                     if inCrowd:
                         if corrans != "":
                             answers = corrans
-                        else:# is in crowd but ent was not found TODO: FIX
+                        else:  # is in crowd but ent was not found TODO: FIX
                             answers = "Crowd failed"
                         if type(answers) == list:
                             answers = answers[0]
 
-                        answer_template = "Hi, {} of {} is {}, according to the crowd, who had an inter-rater agreement " \
+                        answer_template = "Hi, {} of {} is {}, according to the crowd, who had an inter-rater " \
+                                          "agreement " \
                                           "of {} in this batch; the answer distribution for this task was {} support " \
-                                          "votes and {} reject vote (If there are more reject voted than support votes, the answer comes from the crowd).".format(
+                                          "votes and {} reject vote (If there are more reject voted than support " \
+                                          "votes, the answer comes from the crowd).".format(
                             relation, entity, answers, rate, cnt1, cnt2)
                 if not inCrowd:
                     try:
@@ -180,21 +187,29 @@ class msgP:
                         for element in embedAnds:
                             if counter == 0:
                                 answer_template = "Hi, the {} of {} is {}. ".format(rels[0], entity, element)
+                                print("answer_template of fix", answer_template)
                                 counter += 1
                             elif counter < 4:
-                                toappend = recans[random.randint(0,len(recans))-1]
+                                toappend = recans[random.randint(0, len(recans)) - 1]
                                 answer_template += toappend.format(element)
                                 recans.remove(toappend)
                                 counter += 1
-                        # answer_template = f"Here is the answer to your question: {embedAnds[0]}"
                         print("PREFAAIL:", answer_template)
                     except:
-                        answer_template = "Sorry, there is no answer to your question. Please try to rephrase or simplify your question. Keep in mind the SPARQL queries are case sensitive (Surname Name) oaswell as (Movies)."
+                        pass
 
         return answer_template
 
-    # Function to extract relation (Embeddings for the DDIS Movie Graph)
     def checkEmbed(self, graph, WD, WDT, entity, relation):
+        """
+        This function finds the nearst neighbor of the entity in the embedding space and returns the answer.
+        :param graph: the graph
+        :param WD: the wikidata
+        :param WDT: the wikidata types
+        :param entity: the entity
+        :param relation: the relation
+        :return: the found answers from the embedding model
+        """
         head = entity_emb[ent2id[lbl2ent[entity]]]
         relwdtids = getRelWDTid(graph, WDT, relation)
         print("relwdtids", relwdtids)
@@ -234,7 +249,8 @@ class msgP:
                 print('entURI exist', self.entURI)
                 for ent in self.entURI:
                     try:
-                        [entList.append(str(ent.label)) for ent in set(graph.query(queryLabel.format(getEntIdByURI(WD, ent))))]
+                        [entList.append(str(ent.label)) for ent in
+                         set(graph.query(queryLabel.format(getEntIdByURI(WD, ent))))]
                     except:
                         print("No label found")
             else:
@@ -261,7 +277,6 @@ class msgP:
                     print('entURI does not exist')
         print(entList)
         return entList
-
 
     # parse the relation
     def parseRel(self, entity, graph, WDT):
