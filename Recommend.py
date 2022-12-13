@@ -23,7 +23,7 @@ def recommend(entity):
             int.append(entRec)
         # get the intersection of the recommendations
         recomms = list(set(int[0]).intersection(*int[1:]))
-    print("recomms: ", recomms)
+    print("recomms1: ", recomms)
     # check if recommendations are too similar to the entity
     if recomms != []:
         for ent in entity:
@@ -41,7 +41,6 @@ def recommend(entity):
         dist = pairwise_distances(emb, entity_emb)
         for idx in dist.argsort().reshape(-1)[:topN]:
             recomms.append(ent2lbl[id2ent[idx]])
-    for re in recomms:
-        [recomms.remove(rec) for rec in recomms if re in rec or rec in re]
+    print("recomms2: ", recomms)
 
     return recomms

@@ -8,16 +8,13 @@ from Multimedia import Multimedia
 from Crowd import *
 
 
-# from crowd import crowd
-
-
 class msgP:
     def __init__(self, message):
         self.message = message
         self.entURI = []
         self.recommendQuestions = ["I also found the following answer: {}. ", "This might also be an answer: {}. ",
                                    "I also found this answer: {}. ", "Another answer i found: {}. ",
-                                   "I also found this: {}. "]
+                                   "I also found this: {}. ", "This might also be a valid answer: {}. "]
 
     # parse the message and get the response
     def parseMsg(self, graph, WDT, WD, images):
@@ -53,7 +50,7 @@ class msgP:
             relation = rels[0]
             crowd = Crowd()
             inCrowd, rate, lbl, cnt1, lblRev, cnt2, corrans = crowd.searchInCrowd(entity, relation, graph, WDT, WD,
-                                                                                  crowd.workTimeAndApprovalRate)
+                                                                                  crowd.workTimeAndApprovalRate, crowd.kappa_values)
             print('crowd, rate, lbl,cnt1,lblRev,cnt2: ', inCrowd, rate, lbl, cnt1, lblRev, cnt2)
             relid = getRelWDTid(graph, WDT, relation)
             result = []
@@ -117,8 +114,9 @@ class msgP:
 
         # recommendation
         if 'recommend' in rels and len(entities) > 0:
-            answer_templates = ['Here are some recommendations for you: {}, {}, or {}.', 'You may like the following recommendations: '
-                                                                                         '{}, {}, or {}.',
+            answer_templates = ['Here are some recommendations for you: {}, {}, or {}.',
+                                'You may like the following recommendations: '
+                                '{}, {}, or {}.',
                                 'I would recommend: {}, {}, or {}.']
             rcmds = recommend(entities)
             rcmds = [rcmd for rcmd in rcmds if rcmd not in entities]
@@ -152,13 +150,14 @@ class msgP:
             inCrowd = False
             print("More than one entity and more than one relation")
             [entities.remove(entity) for entity in entities if entity in rels]
+
             for entity in entities:
                 for relation in rels:
                     print("first try & entities & rels", entity, relation)
                     crowd = Crowd()
                     inCrowd, rate, lbl, cnt1, lblRev, cnt2, corrans = crowd.searchInCrowd(entity, relation, graph, WDT,
                                                                                           WD,
-                                                                                          crowd.workTimeAndApprovalRate)
+                                                                                          crowd.workTimeAndApprovalRate, crowd.kappa_values)
 
                     print('crowd, rate, lbl,cnt1,lblRev,cnt2: ', inCrowd, rate, lbl, cnt1, lblRev, cnt2, corrans)
                     if inCrowd:
@@ -175,28 +174,30 @@ class msgP:
                                           "votes and {} reject vote (If there are more reject voted than support " \
                                           "votes, the answer comes from the crowd).".format(
                             relation, entity, answers, rate, cnt1, cnt2)
+                        return answer_template
                 if not inCrowd:
-                    try:
-                        print("entity", entity)
-                        print("rels", rels)
-                        embedAnds = self.checkEmbed(graph, WD, WDT, entity, rels[0])
-                        # return the first answer
-                        print("embedAnds of fix", embedAnds)
-                        counter = 0
-                        recans = self.recommendQuestions
-                        for element in embedAnds:
-                            if counter == 0:
-                                answer_template = "Hi, the {} of {} is {}. ".format(rels[0], entity, element)
-                                print("answer_template of fix", answer_template)
-                                counter += 1
-                            elif counter < 4:
-                                toappend = recans[random.randint(0, len(recans)) - 1]
-                                answer_template += toappend.format(element)
-                                recans.remove(toappend)
-                                counter += 1
-                        print("PREFAAIL:", answer_template)
-                    except:
-                        pass
+                    print("entity", entity)
+                    print("rels", rels)
+                    embedAnds = self.checkEmbed(graph, WD, WDT, entity, rels[0])
+                    # return the first answer
+                    print("embedAnds of fix", embedAnds)
+                    counter = 0
+                    recans = self.recommendQuestions
+                    print("recans", recans)
+                    lenTo = len(embedAnds)
+                    for element in embedAnds:
+                        if counter == 0:
+                            answer_template = "Hi, the {} of {} is {}. ".format(rels[0], entity, element)
+                            print("answer_template of fix", answer_template)
+                            counter += 1
+                        elif counter < 3 and counter < lenTo and len(recans) > 0:
+                            randint = random.randint(0, len(recans)-1)
+                            print("randint", randint, "len", len(recans))
+                            toappend = recans[randint]
+                            answer_template += toappend.format(element)
+                            print("answer_template in try", answer_template)
+                            recans.remove(toappend)
+                            counter += 1
 
         return answer_template
 
