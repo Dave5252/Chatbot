@@ -12,7 +12,7 @@ class msgP:
     def __init__(self, message):
         self.message = message
         self.entURI = []
-        self.recommendQuestions = ["I also found the following answer: {}. ", "This might also be an answer: {}. ",
+        self.multipleAns = ["I also found the following answer: {}. ", "This might also be an answer: {}. ",
                                    "I also found this answer: {}. ", "Another answer i found: {}. ",
                                    "I also found this: {}. ", "This might also be a valid answer: {}. "]
 
@@ -44,7 +44,7 @@ class msgP:
         print("is not picture", notPicture)
 
         # check if one entity, one relation
-        if len(entities) == 1 and len(rels) == 1 and 'recommend' not in rels and notPicture:
+        if len(entities) >= 1 and len(rels) >= 1 and 'recommend' not in rels and notPicture:
             print("One ent one rel (Factual Questions)")
             entity = entities[0]
             relation = rels[0]
@@ -74,9 +74,18 @@ class msgP:
                     else:
                         print("take number out, res.objU", res.objU)
                         answers.append(str(res.objU))
-                    answer_template = "Hi, the {} of {} is {}".format(relation, entity, answers[0])
+                    answer_template = "Hi, the {} of {} is {}. ".format(relation, entity, answers[0])
+                    #check in embedding space
+                    if len(answers) != 0:
+                        try:
+                            embedAnds = self.checkEmbed(graph, WD, WDT, entity, relation)
+                            if len(embedAnds) != 0:
+                                if embedAnds[0] != answers[0]:
+                                    answer_template += "Embedding space also found the following answer: {}. ".format(embedAnds[0])
+                        except:pass
                     if len(answers) > 1:
                         # more than one answer --> use embedding. Not the nicest way to do it
+                        print("more than one answer --> use embedding")
                         result = []
                 if inCrowd:
                     if corrans != "":
@@ -89,9 +98,9 @@ class msgP:
                                       "the answer comes from the crowd).".format(
                         relation, entity, answers, rate, cnt1, cnt2)
 
-            if len(result) == 0 and inCrowd == False:
+            if len(result) == 0 and inCrowd == False and 'recommend' not in rels and notPicture:
                 # Check if embedding question
-                recans = self.recommendQuestions
+                recans = self.multipleAns
                 try:
                     embedAnds = self.checkEmbed(graph, WD, WDT, entity, relation)
                     # return the first answer
@@ -182,7 +191,7 @@ class msgP:
                     # return the first answer
                     print("embedAnds of fix", embedAnds)
                     counter = 0
-                    recans = self.recommendQuestions
+                    recans = self.multipleAns
                     print("recans", recans)
                     lenTo = len(embedAnds)
                     for element in embedAnds:
